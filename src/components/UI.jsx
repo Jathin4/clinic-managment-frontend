@@ -167,3 +167,39 @@ export const TD = ({ children, mono, bold, muted }) => (
     {children}
   </td>
 );
+
+// ── RightDrawer ────────────────────────────────────────────────
+export const RightDrawer = ({ title, children, onClose, open = false }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 animate-fade-in-backdrop bg-black/40" 
+        onClick={onClose}
+        style={{ backdropFilter: "blur(4px)" }}
+      />
+      {/* Drawer */}
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-xl bg-white animate-slide-in-from-right shadow-2xl overflow-hidden flex flex-col">
+        {/* Header - if title is provided */}
+        {title && (
+          <div className="px-8 py-6 bg-gradient-to-r from-teal-50 to-blue-50 border-b border-teal-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+            </div>
+            <button 
+              onClick={onClose} 
+              className="p-2 hover:bg-white/50 rounded-lg transition-colors text-gray-600 hover:text-gray-900"
+            >
+              <Icons.X />
+            </button>
+          </div>
+        )}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
