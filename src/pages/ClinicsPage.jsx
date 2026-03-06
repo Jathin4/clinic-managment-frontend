@@ -1,44 +1,110 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import {
-  MOCK_CLINICS, MOCK_USERS, MOCK_PATIENTS, MOCK_APPOINTMENTS,
-  MOCK_ENCOUNTERS, MOCK_DIAGNOSES, MOCK_PRESCRIPTIONS, MOCK_BILLS,
-  MOCK_PAYMENTS, MOCK_MEDICINES, MOCK_AUDIT_LOGS,
-  REVENUE_DATA, DOCTOR_APPOINTMENTS, PAYMENT_MODES, PATIENT_GROWTH,
-  ptName, doctorName
-} from '../data/mockData';
 import Icons from '../components/Icons';
 import { Badge, StatCard, RightDrawer, Btn, Input, Select, Toast, PageHeader } from '../components/UI';
 
+const API_BASE_URL = 'http://127.0.0.1:5020';
+
 const ClinicsPage = () => {
-  const [clinics, setClinics] = useState(MOCK_CLINICS);
+  const [clinics, setClinics] = useState([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [step, setStep] = useState(0);
-  const blank = { name:"", gst_number:"", phone:"", email:"", address:"", city:"", state:"", pincode:"", subscription_plan:"Starter", is_active:true };
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const blank = { name:"", gst_number:"", phone:"", email:"", address:"", city:"", state:"", pincode:"", subscription_plan:"Starter" };
   const [form, setForm] = useState(blank);
-  
-  const filteredClinics = clinics.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.city.toLowerCase().includes(search.toLowerCase())
-  );
-  
+
   const showToast = (msg, type = "success") => { 
     setToast({ message: msg, type }); 
     setTimeout(() => setToast(null), 3000); 
   };
+
+  useEffect(() => {
+    fetchClinics();
+  }, []);
+
+  const fetchClinics = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/clinicsread`);
+      if (!response.ok) throw new Error('Failed to fetch clinics');
+      const data = await response.json();
+      setClinics(data || []);
+    } catch (error) {
+      console.error('Error fetching clinics:', error);
+      showToast('Failed to load clinics', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name) {
       showToast("Clinic name is required", "error");
       return;
     }
-    setClinics(p=>[...p,{...form, id:`C00${p.length+1}`, created_at:"2025-03-04"}]);
-    setShowModal(false); 
-    setForm(blank);
-    setStep(0);
-    showToast("Clinic added successfully");
+
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        ...form,
+        id: form.id || null,
+        created_by: "admin"
+      };
+
+      const response = await fetch(`${API_BASE_URL}/clinic_create_update/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create clinic');
+      }
+
+      showToast('Clinic added successfully', 'success');
+      setShowModal(false);
+      setForm(blank);
+      setStep(0);
+      await fetchClinics();
+    } catch (error) {
+      console.error('Error adding clinic:', error);
+      showToast(error.message || 'Failed to add clinic', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (clinicId) => {
+    if (!window.confirm('Are you sure you want to delete this clinic?')) return;
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`${API_BASE_URL}/clinic_delete/`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: clinicId,
+          modified_by: "admin"
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete clinic');
+      }
+
+      showToast('Clinic deleted successfully', 'success');
+      await fetchClinics();
+    } catch (error) {
+      console.error('Error deleting clinic:', error);
+      showToast(error.message || 'Failed to delete clinic', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleNext = () => {
@@ -57,8 +123,13 @@ const ClinicsPage = () => {
     setStep(0);
   };
 
+  const filteredClinics = clinics.filter(clinic =>
+    clinic.name?.toLowerCase().includes(search.toLowerCase()) ||
+    clinic.city?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div>
+    <div className="bg-slate-50 min-h-screen">
       <PageHeader 
         title="Clinics" 
         subtitle="Manage clinic locations & infrastructure" 
@@ -79,95 +150,112 @@ const ClinicsPage = () => {
       </div>
 
       {/* Clinic Cards Grid */}
-      {filteredClinics.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+      {isLoading ? (
+        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200 shadow-md">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
+          <p className="text-slate-600 mt-4">Loading clinics...</p>
+        </div>
+      ) : filteredClinics.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200 shadow-md">
           <Icons.Clinic />
           <p className="text-slate-600 mt-4">No clinics found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {filteredClinics.map((c, i) => (
             <div 
               key={c.id} 
-              className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-teal-200 transition-all duration-300 opacity-0 animate-fade-in"
+              className="bg-white rounded-xl border border-gray-200 p-4 shadow-md hover:shadow-xl hover:border-teal-400 transition-all duration-300 opacity-0 animate-fade-in"
               style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'forwards' }}
             >
               {/* Header with icon and title */}
-              <div className="flex items-start justify-between mb-5">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-teal-50 border border-teal-100 shadow-sm text-teal-700">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-teal-100 to-teal-50 border border-teal-200 shadow-sm text-teal-700 flex-shrink-0">
                     <Icons.Building />
                   </div>
-                  <div className="flex-1">
-                    <div className="font-bold text-gray-900 text-lg leading-tight">{c.name}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-100">
-                        {c.subscription_plan}
-                      </span>
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-teal-600 uppercase tracking-widest">
-                        <div className="w-1.5 h-1.5 rounded-full bg-teal-500" /> Verified
-                      </span>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 text-sm leading-tight truncate hover:text-teal-700 transition-colors">{c.name}</h3>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      {c.is_active && (
+                        <span className="inline-flex items-center gap-1 text-[9px] px-2 py-1 rounded-full font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 uppercase tracking-wider shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Active
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-                <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-all border border-transparent hover:border-gray-200">
+                <button 
+                  onClick={() => handleDelete(c.id)} 
+                  disabled={isSubmitting}
+                  className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all border border-transparent hover:border-red-200 disabled:opacity-50">
                   <Icons.Trash />
                 </button>
               </div>
 
               {/* Clinic Details */}
-              <div className="space-y-3 mb-5 pb-5 border-b border-gray-100">
-                <div className="flex items-start gap-3">
-                  <div className="pt-0.5">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-                    </svg>
+              <div className="space-y-2.5 mb-4 pb-4 border-b border-gray-100">
+                {c.address && (
+                  <div className="flex items-start gap-2.5 group hover:bg-teal-50 p-2 -mx-2 rounded-lg transition-colors">
+                    <div className="pt-0.5 flex-shrink-0 w-5 h-5 rounded-lg flex items-center justify-center bg-teal-100 group-hover:bg-teal-200 transition-colors">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-teal-700">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
+                    </div>
+                    <div className="text-xs text-gray-700 leading-tight min-w-0 flex-1">
+                      <div className="font-semibold truncate text-gray-800">{c.address}</div>
+                      <div className="text-xs text-gray-500 truncate mt-0.5">{c.city}, {c.state} {c.pincode}</div>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-700 leading-relaxed">
-                    <div className="font-medium">{c.address}</div>
-                    <div className="text-xs text-gray-500">{c.city}, {c.state} {c.pincode}</div>
-                  </div>
-                </div>
+                )}
 
-                <div className="flex items-start gap-3">
-                  <div className="pt-0.5">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400">
-                      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
-                    </svg>
+                {c.phone && (
+                  <div className="flex items-start gap-2.5 group hover:bg-blue-50 p-2 -mx-2 rounded-lg transition-colors">
+                    <div className="pt-0.5 flex-shrink-0 w-5 h-5 rounded-lg flex items-center justify-center bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-blue-700">
+                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
+                      </svg>
+                    </div>
+                    <div className="text-xs text-gray-700 truncate font-medium">{c.phone}</div>
                   </div>
-                  <div className="text-sm text-gray-700">{c.phone}</div>
-                </div>
+                )}
 
-                <div className="flex items-start gap-3">
-                  <div className="pt-0.5">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400">
-                      <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 5L2 6"/>
-                    </svg>
+                {c.email && (
+                  <div className="flex items-start gap-2.5 group hover:bg-amber-50 p-2 -mx-2 rounded-lg transition-colors">
+                    <div className="pt-0.5 flex-shrink-0 w-5 h-5 rounded-lg flex items-center justify-center bg-amber-100 group-hover:bg-amber-200 transition-colors">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-amber-700">
+                        <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 5L2 6"/>
+                      </svg>
+                    </div>
+                    <div className="text-xs text-gray-700 truncate font-medium">{c.email}</div>
                   </div>
-                  <div className="text-sm text-gray-700">{c.email}</div>
-                </div>
+                )}
 
-                <div className="flex items-start gap-3">
-                  <div className="pt-0.5">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400">
-                      <path d="M3 20l10.5-9.5L21 4M21 4l-5 5M21 4l5 5"/>
-                    </svg>
+                {c.gst_number && (
+                  <div className="flex items-start gap-2.5 group hover:bg-purple-50 p-2 -mx-2 rounded-lg transition-colors">
+                    <div className="pt-0.5 flex-shrink-0 w-5 h-5 rounded-lg flex items-center justify-center bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-purple-700">
+                        <path d="M9 11a4 4 0 100-8 4 4 0 000 8zM20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                      </svg>
+                    </div>
+                    <div className="text-xs text-gray-700 min-w-0 flex-1">
+                      <div className="text-[9px] text-gray-500 uppercase tracking-wider font-bold">GST</div>
+                      <div className="font-mono text-xs text-gray-800 truncate">{c.gst_number}</div>
+                    </div>
                   </div>
-                  <div className="text-sm">
-                    <span className="text-gray-700 font-medium">{c.gst_number}</span>
-                    <div className="text-xs text-gray-500">GST Number</div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Status and Actions */}
-              <div className="flex items-center justify-between">
-                <Badge status={c.is_active ? "Active" : "Inactive"} />
-                <div className="flex gap-2">
-                  <button className="p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors border border-transparent hover:border-blue-100">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1">
+                  <Badge status={c.is_active ? "Active" : "Inactive"} />
+                </div>
+                <div className="flex gap-1">
+                  <button className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-all border border-transparent hover:border-blue-200 hover:shadow-sm">
                     <Icons.Edit />
                   </button>
-                  <button className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors border border-transparent hover:border-red-100">
+                  <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all border border-transparent hover:border-red-200 hover:shadow-sm">
                     <Icons.Trash />
                   </button>
                 </div>
@@ -309,10 +397,10 @@ const ClinicsPage = () => {
               </Btn>
               <Btn 
                 onClick={step === 0 ? handleNext : handleAdd}
-                disabled={step === 0 && !form.name}
+                disabled={(step === 0 && !form.name) || isSubmitting}
                 className="flex items-center gap-2"
               >
-                {step === 0 ? <>Next <Icons.ChevronRight /></> : <>✓ Register Clinic</>}
+                {isSubmitting ? '...' : step === 0 ? <>Next <Icons.ChevronRight /></> : <>✓ Register Clinic</>}
               </Btn>
             </div>
           </div>
