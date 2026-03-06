@@ -8,11 +8,13 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const ReportsPage = () => {
   const [tab, setTab] = useState("revenue");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   return (
     <div>
       <PageHeader title="Reports & Analytics" subtitle="Comprehensive clinic insights" actions={
@@ -23,7 +25,7 @@ const ReportsPage = () => {
       }/>
       <div className="flex gap-2 mb-6 bg-white rounded-xl p-1 border border-gray-100 w-fit shadow-sm">
         {[["revenue","Revenue"],["doctors","Doctor Performance"],["patients","Patient Growth"],["medicines","Medicine Sales"],["audit","Audit Log"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setTab(id)} className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${tab===id?"text-white shadow-sm":"text-slate-500 hover:text-slate-700"}`} style={tab===id?{background:"#0E6C68"}:{}}>{label}</button>
+          <button key={id} onClick={()=>{setTab(id);setCurrentPage(1);}} className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${tab===id?"text-white shadow-sm":"text-slate-500 hover:text-slate-700"}`} style={tab===id?{background:"#0E6C68"}:{}}>{label}</button>
         ))}
       </div>
       {tab==="revenue" && (
@@ -38,7 +40,7 @@ const ReportsPage = () => {
             <LineChart data={REVENUE_DATA} height={250}/>
           </div>
           <DataTable title="Monthly Revenue Breakdown" columns={["Month","Revenue","Expenses","Profit","Margin"]}
-            rows={REVENUE_DATA.map(d=>(
+            rows={REVENUE_DATA.slice((currentPage-1)*pageSize,currentPage*pageSize).map(d=>(
               <TR key={d.month}>
                 <TD bold>{d.month}</TD>
                 <TD><span className="text-emerald-600 font-semibold">₹{d.revenue.toLocaleString()}</span></TD>
@@ -48,6 +50,7 @@ const ReportsPage = () => {
               </TR>
             ))}
           />
+          <Pagination currentPage={currentPage} totalPages={Math.ceil(REVENUE_DATA.length/pageSize)} onPageChange={setCurrentPage} totalItems={REVENUE_DATA.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
         </div>
       )}
       {tab==="doctors" && (
@@ -57,7 +60,7 @@ const ReportsPage = () => {
             <BarChart data={DOCTOR_APPOINTMENTS} height={240}/>
           </div>
           <DataTable title="Doctor Performance" columns={["Doctor","Role","Total Apts","Completed","Completion Rate","Avg Rating"]}
-            rows={DOCTOR_APPOINTMENTS.map(d=>(
+            rows={DOCTOR_APPOINTMENTS.slice((currentPage-1)*pageSize,currentPage*pageSize).map(d=>(
               <TR key={d.doctor}>
                 <TD bold>{d.doctor}</TD>
                 <TD><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">Doctor</span></TD>
@@ -75,6 +78,7 @@ const ReportsPage = () => {
               </TR>
             ))}
           />
+          <Pagination currentPage={currentPage} totalPages={Math.ceil(DOCTOR_APPOINTMENTS.length/pageSize)} onPageChange={setCurrentPage} totalItems={DOCTOR_APPOINTMENTS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
         </div>
       )}
       {tab==="patients" && (
@@ -89,7 +93,7 @@ const ReportsPage = () => {
             <AreaChart data={PATIENT_GROWTH} height={250}/>
           </div>
           <DataTable title="Patient Registration Log" columns={["UHID","Name","Gender","Blood Group","Doctor","Registered"]}
-            rows={MOCK_PATIENTS.map(p=>(
+            rows={MOCK_PATIENTS.slice((currentPage-1)*pageSize,currentPage*pageSize).map(p=>(
               <TR key={p.id}>
                 <TD mono bold>{p.uhid}</TD>
                 <TD bold>{ptName(p)}</TD>
@@ -100,11 +104,13 @@ const ReportsPage = () => {
               </TR>
             ))}
           />
+          <Pagination currentPage={currentPage} totalPages={Math.ceil(MOCK_PATIENTS.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_PATIENTS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
         </div>
       )}
       {tab==="medicines" && (
+        <>
         <DataTable title="Medicine Sales Report" columns={["Medicine","Category","Units Sold","Revenue","Stock Left","Status"]}
-          rows={MOCK_MEDICINES.map(m=>{
+          rows={MOCK_MEDICINES.slice((currentPage-1)*pageSize,currentPage*pageSize).map(m=>{
             const sold=Math.floor(Math.random()*200+50);
             return (
               <TR key={m.id}>
@@ -116,10 +122,13 @@ const ReportsPage = () => {
             );
           })}
         />
+        <Pagination currentPage={currentPage} totalPages={Math.ceil(MOCK_MEDICINES.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_MEDICINES.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
+        </>
       )}
       {tab==="audit" && (
+        <>
         <DataTable title="Audit Log" subtitle="System activity trail" columns={["Log ID","User","Action","Entity","Entity ID","Timestamp"]}
-          rows={MOCK_AUDIT_LOGS.map(l=>{
+          rows={MOCK_AUDIT_LOGS.slice((currentPage-1)*pageSize,currentPage*pageSize).map(l=>{
             const user=MOCK_USERS.find(u=>u.id===l.user_id);
             return (
               <TR key={l.id}>
@@ -133,6 +142,8 @@ const ReportsPage = () => {
             );
           })}
         />
+        <Pagination currentPage={currentPage} totalPages={Math.ceil(MOCK_AUDIT_LOGS.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_AUDIT_LOGS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
+        </>
       )}
     </div>
   );

@@ -8,7 +8,7 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const UsersPage = () => {
@@ -18,6 +18,8 @@ const UsersPage = () => {
   const [toast, setToast] = useState(null);
   const blank = { full_name:"", email:"", phone:"", role:"Receptionist", clinic_id:"C001", is_active:true };
   const [form, setForm] = useState(blank);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const f = v => users.filter(u => u.full_name.toLowerCase().includes(v.toLowerCase()) || u.email.toLowerCase().includes(v.toLowerCase()) || u.role.toLowerCase().includes(v.toLowerCase()));
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null),3000); };
   const handleAdd = () => {
@@ -31,10 +33,10 @@ const UsersPage = () => {
       <PageHeader title="Users & Staff" subtitle="Manage roles and access" actions={<Btn onClick={()=>setShowModal(true)}><Icons.Plus/>Add User</Btn>}/>
       <DataTable
         title="User List" subtitle={`${users.length} users across all clinics`}
-        search={search} onSearch={setSearch} searchPlaceholder="Search by name, email, role…"
+        search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search by name, email, role…"
         actions={<Btn variant="secondary"><Icons.Download/>Export</Btn>}
         columns={["Staff Member","Email","Phone","Role","Clinic","Last Login","Status","Actions"]}
-        rows={f(search).map(u=>{
+        rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(u=>{
           const clinic = MOCK_CLINICS.find(c=>c.id===u.clinic_id);
           return (
             <TR key={u.id}>
@@ -62,6 +64,7 @@ const UsersPage = () => {
           );
         })}
       />
+      <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
       {showModal && (
         <Modal title="Add New User" onClose={()=>setShowModal(false)} wide>
           <div className="grid grid-cols-2 gap-4">

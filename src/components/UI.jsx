@@ -168,6 +168,74 @@ export const TD = ({ children, mono, bold, muted }) => (
   </td>
 );
 
+// ── Pagination ─────────────────────────────────────────────────
+export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, pageSize, onPageSizeChange, pageSizeOptions = [10, 20, 50, 100] }) => {
+  if (totalPages <= 0) return null;
+
+  const getPages = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+    if (start > 1) { pages.push(1); if (start > 2) pages.push("..."); }
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages) { if (end < totalPages - 1) pages.push("..."); pages.push(totalPages); }
+    return pages;
+  };
+
+  return (
+    <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center gap-3 text-sm text-slate-500">
+        {totalItems != null && <span>{totalItems} total records</span>}
+        {onPageSizeChange && (
+          <select
+            value={pageSize}
+            onChange={e => onPageSizeChange(Number(e.target.value))}
+            className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-teal-400 bg-white"
+          >
+            {pageSizeOptions.map(s => <option key={s} value={s}>{s} / page</option>)}
+          </select>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-600"
+        >
+          ‹ Prev
+        </button>
+        {getPages().map((p, i) =>
+          p === "..." ? (
+            <span key={`dot-${i}`} className="px-2 text-slate-400 text-sm">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p)}
+              className={`min-w-[34px] h-[34px] text-sm font-medium rounded-lg transition-all ${
+                p === currentPage
+                  ? "text-white shadow-sm"
+                  : "text-slate-600 hover:bg-gray-50 border border-gray-200"
+              }`}
+              style={p === currentPage ? { background: "#0E6C68" } : {}}
+            >
+              {p}
+            </button>
+          )
+        )}
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-600"
+        >
+          Next ›
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ── RightDrawer ────────────────────────────────────────────────
 export const RightDrawer = ({ title, children, onClose, open = false }) => {
   if (!open) return null;
