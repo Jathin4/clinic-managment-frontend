@@ -8,7 +8,7 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const InventoryPage = () => {
@@ -17,6 +17,8 @@ const InventoryPage = () => {
   const [showModal, setShowModal] = useState(false);
   const blank = { name:"", batch:"", stock:"", expiry:"", price:"", category:"" };
   const [form, setForm] = useState(blank);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const f = v => meds.filter(m => m.name.toLowerCase().includes(v.toLowerCase()) || m.category.toLowerCase().includes(v.toLowerCase()) || m.batch.toLowerCase().includes(v.toLowerCase()));
   const stockColor = s => ({Good:"#0E6C68",Low:"#f59e0b",Critical:"#ef4444",Expiring:"#f97316"}[s]||"#94a3b8");
   const handleAdd = () => {
@@ -35,10 +37,10 @@ const InventoryPage = () => {
       </div>
       <DataTable
         title="Medicine Inventory" subtitle={`${meds.length} medicines tracked`}
-        search={search} onSearch={setSearch} searchPlaceholder="Search name, category, batch…"
+        search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search name, category, batch…"
         actions={<Btn variant="secondary"><Icons.Download/>Export</Btn>}
         columns={["Medicine Name","Category","Batch No.","Stock Level","Expiry","Price / Unit","Status","Actions"]}
-        rows={f(search).map(m=>(
+        rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(m=>(
           <TR key={m.id}>
             <TD>
               <div className="flex items-center gap-2.5">
@@ -68,6 +70,7 @@ const InventoryPage = () => {
           </TR>
         ))}
       />
+      <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
       {showModal && (
         <Modal title="Add Medicine" onClose={()=>setShowModal(false)} wide>
           <div className="grid grid-cols-2 gap-4">

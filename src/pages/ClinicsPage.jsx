@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import Icons from '../components/Icons';
-import { Badge, StatCard, RightDrawer, Btn, Input, Select, Toast, PageHeader } from '../components/UI';
+import { Badge, StatCard, RightDrawer, Btn, Input, Select, Toast, PageHeader, Pagination } from '../components/UI';
 
 const API_BASE_URL = 'http://127.0.0.1:5020';
 
@@ -13,6 +13,8 @@ const ClinicsPage = () => {
   const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
   const blank = { name:"", gst_number:"", phone:"", email:"", address:"", city:"", state:"", pincode:"", subscription_plan:"Starter" };
   const [form, setForm] = useState(blank);
 
@@ -162,7 +164,7 @@ const ClinicsPage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {filteredClinics.map((c, i) => (
+          {filteredClinics.slice((currentPage-1)*pageSize,currentPage*pageSize).map((c, i) => (
             <div 
               key={c.id} 
               className="bg-white rounded-xl border border-gray-200 p-4 shadow-md hover:shadow-xl hover:border-teal-400 transition-all duration-300 opacity-0 animate-fade-in"
@@ -264,6 +266,7 @@ const ClinicsPage = () => {
           ))}
         </div>
       )}
+      <Pagination currentPage={currentPage} totalPages={Math.ceil(filteredClinics.length/pageSize)} onPageChange={setCurrentPage} totalItems={filteredClinics.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
 
       {/* Add Clinic Drawer from Right */}
       <RightDrawer 

@@ -8,7 +8,7 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const BillingPage = () => {
@@ -18,6 +18,8 @@ const BillingPage = () => {
   const [showModal, setShowModal] = useState(false);
   const blank = { patient_id:"", encounter_id:"", subtotal:0, gst_amount:0, discount:0, clinic_id:"C001" };
   const [form, setForm] = useState(blank);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const f = v => bills.filter(b => {
     const pat=MOCK_PATIENTS.find(p=>p.id===b.patient_id);
     return (pat?ptName(pat):"").toLowerCase().includes(v.toLowerCase()) || b.invoice_number.toLowerCase().includes(v.toLowerCase()) || b.status.toLowerCase().includes(v.toLowerCase());
@@ -41,10 +43,10 @@ const BillingPage = () => {
       </div>
       <DataTable
         title="Invoice List" subtitle={`${bills.length} invoices`}
-        search={search} onSearch={setSearch} searchPlaceholder="Search patient, invoice #, status…"
+        search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search patient, invoice #, status…"
         actions={<Btn variant="secondary"><Icons.Download/>Export CSV</Btn>}
         columns={["Invoice #","Patient","Encounter","Date","Subtotal","GST","Discount","Total","Status","Actions"]}
-        rows={f(search).map(b=>{
+        rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(b=>{
           const pat=MOCK_PATIENTS.find(p=>p.id===b.patient_id);
           return (
             <TR key={b.id}>
@@ -67,6 +69,7 @@ const BillingPage = () => {
           );
         })}
       />
+      <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
       {viewBill && (
         <Modal title={`Invoice — ${viewBill.invoice_number}`} onClose={()=>setViewBill(null)} wide>
           <div className="space-y-4">

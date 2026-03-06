@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Icons from '../components/Icons';
-import { Badge, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Modal } from '../components/UI';
+import { Badge, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Modal, Pagination } from '../components/UI';
  
 const API_BASE_URL = 'http://127.0.0.1:5020';
 const CLINIC_ID = 1;
@@ -16,6 +16,8 @@ const PatientsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
  
   const blank = {
     first_name: "", last_name: "", gender: "Male", dob: "",
@@ -184,7 +186,7 @@ const PatientsPage = () => {
         title="Patient List"
         subtitle={`${patients.length} patients registered`}
         search={search}
-        onSearch={setSearch}
+        onSearch={v => { setSearch(v); setCurrentPage(1); }}
         searchPlaceholder="Search by UHID, name, phone…"
         actions={<Btn variant="secondary"><Icons.Download />Export</Btn>}
         columns={["UHID", "Patient Name", "Gender", "Contact", "Blood Group", "Registered", "Actions"]}
@@ -196,7 +198,10 @@ const PatientsPage = () => {
               </td></TR>]
             : filtered.length === 0
               ? [<TR key="empty"><td colSpan={7} className="text-center py-8 text-slate-400">No patients found</td></TR>]
-              : filtered.map(p => (
+              : (() => {
+                  const totalPages = Math.ceil(filtered.length / pageSize);
+                  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+                  return paginated.map(p => (
                   <TR key={p.id}>
                     <TD mono bold>{p.uhid}</TD>
  
@@ -241,8 +246,11 @@ const PatientsPage = () => {
                     </TD>
                   </TR>
                 ))
+        })()
         }
       />
+ 
+      {!isLoading && <Pagination currentPage={currentPage} totalPages={Math.ceil(filtered.length / pageSize)} onPageChange={setCurrentPage} totalItems={filtered.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }} />}
  
       {/* Modal — same pattern as UsersPage */}
       {showModal && (

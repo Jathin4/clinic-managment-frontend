@@ -8,7 +8,7 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const AppointmentsPage = () => {
@@ -17,6 +17,8 @@ const AppointmentsPage = () => {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const blank = { patient_id:"", doctor_id:"", appointment_date:"", slot_time:"", notes:"" };
   const [form, setForm] = useState(blank);
   const showToast = msg=>{ setToast(msg); setTimeout(()=>setToast(null),3000); };
@@ -46,11 +48,12 @@ const AppointmentsPage = () => {
         </div>
       }/>
       {view==="table" ? (
+        <>
         <DataTable
           title="Appointment List" subtitle={`${apts.length} total appointments`}
-          search={search} onSearch={setSearch} searchPlaceholder="Search patient, doctor, status…"
+          search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search patient, doctor, status…"
           columns={["Token","Patient","Doctor","Date","Time","Notes","Status","Actions"]}
-          rows={f(search).map(a=>{
+          rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(a=>{
             const pat = MOCK_PATIENTS.find(p=>p.id===a.patient_id);
             return (
               <TR key={a.id}>
@@ -76,6 +79,8 @@ const AppointmentsPage = () => {
             );
           })}
         />
+        <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
+      </>
       ) : (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div className="text-lg font-bold text-slate-800 mb-4">March 2025</div>

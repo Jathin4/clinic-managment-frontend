@@ -8,7 +8,7 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const PaymentsPage = () => {
@@ -17,6 +17,8 @@ const PaymentsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const blank = { bill_id:"", payment_mode:"Cash", transaction_reference:"", amount_paid:"" };
   const [form, setForm] = useState(blank);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const f = v => pays.filter(p => {
     const bill=MOCK_BILLS.find(b=>b.id===p.bill_id);
     const pat=bill?MOCK_PATIENTS.find(pt=>pt.id===bill.patient_id):null;
@@ -37,10 +39,10 @@ const PaymentsPage = () => {
       </div>
       <DataTable
         title="Payment History" subtitle={`${pays.length} transactions`}
-        search={search} onSearch={setSearch} searchPlaceholder="Search patient, mode, bill…"
+        search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search patient, mode, bill…"
         actions={<Btn variant="secondary"><Icons.Download/>Export</Btn>}
         columns={["Payment ID","Bill","Patient","Payment Mode","Transaction Ref","Amount Paid","Payment Date"]}
-        rows={f(search).map(p=>{
+        rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(p=>{
           const bill=MOCK_BILLS.find(b=>b.id===p.bill_id);
           const pat=bill?MOCK_PATIENTS.find(pt=>pt.id===bill.patient_id):null;
           return (
@@ -56,6 +58,7 @@ const PaymentsPage = () => {
           );
         })}
       />
+      <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
       {showModal && (
         <Modal title="Record Payment" onClose={()=>setShowModal(false)}>
           <div className="space-y-4">

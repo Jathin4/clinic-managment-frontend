@@ -8,7 +8,7 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const EncountersPage = () => {
@@ -18,6 +18,8 @@ const EncountersPage = () => {
   const [viewEnc, setViewEnc] = useState(null);
   const blank = { patient_id:"", doctor_id:"", appointment_id:"", chief_complaint:"", notes:"", follow_up_date:"", clinic_id:"C001" };
   const [form, setForm] = useState(blank);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const f = v => encs.filter(e => {
     const pn = ptName(MOCK_PATIENTS.find(p=>p.id===e.patient_id)||{first_name:"",last_name:""});
     return pn.toLowerCase().includes(v.toLowerCase()) || e.chief_complaint.toLowerCase().includes(v.toLowerCase());
@@ -75,9 +77,9 @@ const EncountersPage = () => {
       <PageHeader title="Encounters" subtitle="Clinical encounter records" actions={<Btn onClick={()=>setShowModal(true)}><Icons.Plus/>New Encounter</Btn>}/>
       <DataTable
         title="Encounter List" subtitle={`${encs.length} encounters`}
-        search={search} onSearch={setSearch} searchPlaceholder="Search patient, complaint…"
+        search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search patient, complaint…"
         columns={["Encounter ID","Patient","Doctor","Visit Date","Chief Complaint","Follow-up","Actions"]}
-        rows={f(search).map(e=>{
+        rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(e=>{
           const pat=MOCK_PATIENTS.find(p=>p.id===e.patient_id);
           return (
             <TR key={e.id}>
@@ -97,6 +99,7 @@ const EncountersPage = () => {
           );
         })}
       />
+      <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
       {showModal && (
         <Modal title="New Encounter" onClose={()=>setShowModal(false)} wide>
           <div className="grid grid-cols-2 gap-4">

@@ -8,7 +8,7 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const DiagnosesPage = () => {
@@ -17,6 +17,8 @@ const DiagnosesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const blank = { encounter_id:"", icd_code:"", description:"" };
   const [form, setForm] = useState(blank);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const f = v => diags.filter(d => d.icd_code.toLowerCase().includes(v.toLowerCase()) || d.description.toLowerCase().includes(v.toLowerCase()) || d.encounter_id.toLowerCase().includes(v.toLowerCase()));
   const handleAdd = () => {
     setDiags(p=>[...p,{...form,id:`DX00${p.length+1}`}]);
@@ -27,10 +29,10 @@ const DiagnosesPage = () => {
       <PageHeader title="Diagnoses" subtitle="ICD-10 diagnosis records" actions={<Btn onClick={()=>setShowModal(true)}><Icons.Plus/>Add Diagnosis</Btn>}/>
       <DataTable
         title="Diagnosis List" subtitle={`${diags.length} diagnoses recorded`}
-        search={search} onSearch={setSearch} searchPlaceholder="Search ICD code, description…"
+        search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search ICD code, description…"
         actions={<Btn variant="secondary"><Icons.Download/>Export</Btn>}
         columns={["Diagnosis ID","Encounter","ICD Code","Description","Patient","Doctor"]}
-        rows={f(search).map(d=>{
+        rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(d=>{
           const enc=MOCK_ENCOUNTERS.find(e=>e.id===d.encounter_id);
           const pat=enc?MOCK_PATIENTS.find(p=>p.id===enc.patient_id):null;
           return (
@@ -45,6 +47,7 @@ const DiagnosesPage = () => {
           );
         })}
       />
+      <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
       {showModal && (
         <Modal title="Add Diagnosis" onClose={()=>setShowModal(false)}>
           <div className="space-y-4">

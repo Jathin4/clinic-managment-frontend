@@ -8,7 +8,7 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const PrescriptionsPage = () => {
@@ -17,6 +17,8 @@ const PrescriptionsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const blank = { encounter_id:"", medicine_name:"", dosage:"", frequency:"OD", duration:"", instructions:"" };
   const [form, setForm] = useState(blank);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const f = v => rxs.filter(r => r.medicine_name.toLowerCase().includes(v.toLowerCase()) || r.encounter_id.toLowerCase().includes(v.toLowerCase()));
   const handleAdd = () => { setRxs(p=>[...p,{...form,id:`RX00${p.length+1}`}]); setShowModal(false); setForm(blank); };
   return (
@@ -24,10 +26,10 @@ const PrescriptionsPage = () => {
       <PageHeader title="Prescriptions" subtitle="Medicine prescription records" actions={<Btn onClick={()=>setShowModal(true)}><Icons.Plus/>Add Prescription</Btn>}/>
       <DataTable
         title="Prescription List" subtitle={`${rxs.length} prescriptions`}
-        search={search} onSearch={setSearch} searchPlaceholder="Search medicine, encounter…"
+        search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search medicine, encounter…"
         actions={<Btn variant="secondary"><Icons.Download/>Export</Btn>}
         columns={["Rx ID","Encounter","Patient","Medicine","Dosage","Frequency","Duration","Instructions"]}
-        rows={f(search).map(r=>{
+        rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(r=>{
           const enc=MOCK_ENCOUNTERS.find(e=>e.id===r.encounter_id);
           const pat=enc?MOCK_PATIENTS.find(p=>p.id===enc.patient_id):null;
           return (
@@ -44,6 +46,7 @@ const PrescriptionsPage = () => {
           );
         })}
       />
+      <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
       {showModal && (
         <Modal title="Add Prescription" onClose={()=>setShowModal(false)} wide>
           <div className="grid grid-cols-2 gap-4">
