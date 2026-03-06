@@ -8,8 +8,9 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const ReportsPage = () => {
   const [tab, setTab] = useState("revenue");
@@ -49,8 +50,8 @@ const ReportsPage = () => {
                 <TD><span className="text-teal-600 font-semibold">{Math.round(((d.revenue-d.expenses)/d.revenue)*100)}%</span></TD>
               </TR>
             ))}
+          currentPage={currentPage} totalPages={Math.ceil(REVENUE_DATA.length/pageSize)} onPageChange={setCurrentPage} totalItems={REVENUE_DATA.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
           />
-          <Pagination currentPage={currentPage} totalPages={Math.ceil(REVENUE_DATA.length/pageSize)} onPageChange={setCurrentPage} totalItems={REVENUE_DATA.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
         </div>
       )}
       {tab==="doctors" && (
@@ -77,8 +78,8 @@ const ReportsPage = () => {
                 <TD><span className="text-amber-500 font-bold">★ {(4+Math.random()*0.9).toFixed(1)}</span></TD>
               </TR>
             ))}
+          currentPage={currentPage} totalPages={Math.ceil(DOCTOR_APPOINTMENTS.length/pageSize)} onPageChange={setCurrentPage} totalItems={DOCTOR_APPOINTMENTS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
           />
-          <Pagination currentPage={currentPage} totalPages={Math.ceil(DOCTOR_APPOINTMENTS.length/pageSize)} onPageChange={setCurrentPage} totalItems={DOCTOR_APPOINTMENTS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
         </div>
       )}
       {tab==="patients" && (
@@ -103,12 +104,11 @@ const ReportsPage = () => {
                 <TD muted>{p.created_at}</TD>
               </TR>
             ))}
+          currentPage={currentPage} totalPages={Math.ceil(MOCK_PATIENTS.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_PATIENTS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
           />
-          <Pagination currentPage={currentPage} totalPages={Math.ceil(MOCK_PATIENTS.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_PATIENTS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
         </div>
       )}
       {tab==="medicines" && (
-        <>
         <DataTable title="Medicine Sales Report" columns={["Medicine","Category","Units Sold","Revenue","Stock Left","Status"]}
           rows={MOCK_MEDICINES.slice((currentPage-1)*pageSize,currentPage*pageSize).map(m=>{
             const sold=Math.floor(Math.random()*200+50);
@@ -121,12 +121,10 @@ const ReportsPage = () => {
               </TR>
             );
           })}
+        currentPage={currentPage} totalPages={Math.ceil(MOCK_MEDICINES.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_MEDICINES.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
         />
-        <Pagination currentPage={currentPage} totalPages={Math.ceil(MOCK_MEDICINES.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_MEDICINES.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
-        </>
       )}
       {tab==="audit" && (
-        <>
         <DataTable title="Audit Log" subtitle="System activity trail" columns={["Log ID","User","Action","Entity","Entity ID","Timestamp"]}
           rows={MOCK_AUDIT_LOGS.slice((currentPage-1)*pageSize,currentPage*pageSize).map(l=>{
             const user=MOCK_USERS.find(u=>u.id===l.user_id);
@@ -141,9 +139,8 @@ const ReportsPage = () => {
               </TR>
             );
           })}
+        currentPage={currentPage} totalPages={Math.ceil(MOCK_AUDIT_LOGS.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_AUDIT_LOGS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
         />
-        <Pagination currentPage={currentPage} totalPages={Math.ceil(MOCK_AUDIT_LOGS.length/pageSize)} onPageChange={setCurrentPage} totalItems={MOCK_AUDIT_LOGS.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
-        </>
       )}
     </div>
   );

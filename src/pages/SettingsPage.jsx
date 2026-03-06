@@ -10,6 +10,7 @@ import {
 import Icons from '../components/Icons';
 import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const SettingsPage = () => (
   <div>

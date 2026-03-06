@@ -36,7 +36,7 @@ export const StatCard = ({ title, value, change, icon: IconComp, bgColor = "#DFF
         {change}
       </span>
     </div>
-    <div className="text-2xl font-bold text-slate-800 mb-1 group-hover:text-teal-700 transition-colors">{value}</div>
+    <div className="text-2xl font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">{value}</div>
     <div className="text-sm text-slate-500">{title}</div>
   </div>
 );
@@ -120,7 +120,7 @@ export const PageHeader = ({ title, subtitle, actions }) => (
 );
 
 // ── DataTable ──────────────────────────────────────────────────
-export const DataTable = ({ title, subtitle, search, onSearch, searchPlaceholder, actions, columns, rows, empty }) => (
+export const DataTable = ({ title, subtitle, search, onSearch, searchPlaceholder, actions, columns, rows, empty, currentPage, totalPages, onPageChange, totalItems, pageSize, onPageSizeChange, pageSizeOptions }) => (
   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
     <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
       <div>
@@ -154,6 +154,7 @@ export const DataTable = ({ title, subtitle, search, onSearch, searchPlaceholder
         </tbody>
       </table>
     </div>
+    {onPageChange && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} totalItems={totalItems} pageSize={pageSize} onPageSizeChange={onPageSizeChange} pageSizeOptions={pageSizeOptions} />}
   </div>
 );
 

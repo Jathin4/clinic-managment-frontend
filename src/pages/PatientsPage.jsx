@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import Icons from '../components/Icons';
-import { Badge, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Modal, Pagination } from '../components/UI';
- 
-const API_BASE_URL = 'http://127.0.0.1:5020';
+import { Badge, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Modal } from '../components/UI';
+
 const CLINIC_ID = 1;
 const CREATED_BY = "admin";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
  
 const PatientsPage = () => {
   const [patients, setPatients] = useState([]);
@@ -248,9 +248,8 @@ const PatientsPage = () => {
                 ))
         })()
         }
+      currentPage={currentPage} totalPages={Math.ceil(filtered.length / pageSize)} onPageChange={setCurrentPage} totalItems={filtered.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
       />
- 
-      {!isLoading && <Pagination currentPage={currentPage} totalPages={Math.ceil(filtered.length / pageSize)} onPageChange={setCurrentPage} totalItems={filtered.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }} />}
  
       {/* Modal — same pattern as UsersPage */}
       {showModal && (
