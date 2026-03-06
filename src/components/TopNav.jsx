@@ -18,11 +18,7 @@ const TopNav = () => {
         </button>
       )}
       <div className="flex-1 flex items-center gap-4">
-        <div>
-          <span className="text-xs text-slate-400 font-medium">City Medical Center</span>
-          <span className="mx-2 text-slate-200">|</span>
-          <span className="text-sm font-semibold text-slate-700">{pageTitle}</span>
-        </div>
+       
       </div>
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl text-slate-400">

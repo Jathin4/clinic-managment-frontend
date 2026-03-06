@@ -8,8 +8,9 @@ import {
   ptName, doctorName
 } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Pagination } from '../components/UI';
+import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const PrescriptionsPage = () => {
   const [rxs, setRxs] = useState(MOCK_PRESCRIPTIONS);
@@ -45,8 +46,8 @@ const PrescriptionsPage = () => {
             </TR>
           );
         })}
+      currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
       />
-      <Pagination currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}/>
       {showModal && (
         <Modal title="Add Prescription" onClose={()=>setShowModal(false)} wide>
           <div className="grid grid-cols-2 gap-4">
