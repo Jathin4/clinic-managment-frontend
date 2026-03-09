@@ -120,43 +120,93 @@ export const PageHeader = ({ title, subtitle, actions }) => (
 );
 
 // ── DataTable ──────────────────────────────────────────────────
-export const DataTable = ({ title, subtitle, search, onSearch, searchPlaceholder, actions, columns, rows, empty, currentPage, totalPages, onPageChange, totalItems, pageSize, onPageSizeChange, pageSizeOptions }) => (
-  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-    <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-      <div>
-        <div className="font-semibold text-slate-700">{title}</div>
-        {subtitle && <div className="text-xs text-slate-400 mt-0.5">{subtitle}</div>}
+//
+// Two usage modes:
+//
+// MODE 1 — Column-config + data array (recommended, no manual TR/TD needed):
+//   columns={[
+//     { key: 'name',   label: 'Name',   bold: true },
+//     { key: 'status', label: 'Status', render: (val, row) => <Badge status={val} /> },
+//   ]}
+//   data={filteredArray}          ← raw objects; DataTable slices for pagination
+//
+// MODE 2 — Legacy: pass pre-built JSX rows (backward compatible)
+//   columns={["Name", "Status"]}
+//   rows={pagedItems.map(item => <TR key={item.id}>...</TR>)}
+//
+export const DataTable = ({
+  title, subtitle, search, onSearch, searchPlaceholder, actions, empty,
+  // Mode 1
+  columns, data,
+  // Mode 2 (legacy)
+  rows,
+  // Pagination (works for both modes)
+  currentPage, totalPages, onPageChange, totalItems, pageSize, onPageSizeChange, pageSizeOptions,
+}) => {
+  // Derive column header labels for both modes
+  const headers = columns.map(c => (typeof c === 'string' ? c : c.label));
+
+  // Build rendered rows for column-config mode
+  const dataRows = data
+    ? (data.slice(
+        currentPage && pageSize ? (currentPage - 1) * pageSize : 0,
+        currentPage && pageSize ? currentPage * pageSize : undefined
+      ).map((row, i) => (
+        <tr key={row.id ?? i} className="hover:bg-gray-50 transition-colors" style={{ borderBottom: "1px solid #f8fafc" }}>
+          {columns.map(col => {
+            const val = row[col.key];
+            return (
+              <td key={col.key}
+                className={`px-5 py-3.5 text-sm ${col.mono ? 'font-mono' : ''} ${col.bold ? 'font-semibold text-slate-800' : col.muted ? 'text-slate-400' : 'text-slate-600'}`}>
+                {col.render ? col.render(val, row) : val ?? '—'}
+              </td>
+            );
+          })}
+        </tr>
+      )))
+    : null;
+
+  const bodyRows = dataRows ?? rows ?? [];
+  const isEmpty = Array.isArray(bodyRows) && bodyRows.length === 0;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div className="font-semibold text-slate-700">{title}</div>
+          {subtitle && <div className="text-xs text-slate-400 mt-0.5">{subtitle}</div>}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {onSearch && (
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icons.Search /></div>
+              <input value={search} onChange={e => onSearch(e.target.value)} placeholder={searchPlaceholder || "Search…"}
+                className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:bg-white w-56 transition-all" />
+            </div>
+          )}
+          {actions}
+        </div>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        {onSearch && (
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icons.Search /></div>
-            <input value={search} onChange={e => onSearch(e.target.value)} placeholder={searchPlaceholder || "Search…"}
-              className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:bg-white w-56 transition-all" />
-          </div>
-        )}
-        {actions}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+              {headers.map(h => (
+                <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "#94a3b8" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {isEmpty
+              ? <tr><td colSpan={headers.length} className="text-center py-14 text-slate-400 text-sm">{empty || "No records found"}</td></tr>
+              : bodyRows}
+          </tbody>
+        </table>
       </div>
+      {onPageChange && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} totalItems={totalItems} pageSize={pageSize} onPageSizeChange={onPageSizeChange} pageSizeOptions={pageSizeOptions} />}
     </div>
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-            {columns.map(c => (
-              <th key={c} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "#94a3b8" }}>{c}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0
-            ? <tr><td colSpan={columns.length} className="text-center py-14 text-slate-400 text-sm">{empty || "No records found"}</td></tr>
-            : rows}
-        </tbody>
-      </table>
-    </div>
-    {onPageChange && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} totalItems={totalItems} pageSize={pageSize} onPageSizeChange={onPageSizeChange} pageSizeOptions={pageSizeOptions} />}
-  </div>
-);
+  );
+};
 
 // ── TR / TD ────────────────────────────────────────────────────
 export const TR = ({ children, onClick }) => (
