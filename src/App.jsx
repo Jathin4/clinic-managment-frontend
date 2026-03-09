@@ -38,7 +38,7 @@ const PAGE_MAP = {
 };
 
 function App() {
-  const { page, authPage, isLoggedIn, setIsLoggedIn, setAuthPage } = useApp();
+  const { page, authPage, isLoggedIn, setIsLoggedIn, setUser, setAuthPage } = useApp();
 
   // ── Auth flow ──────────────────────────────────────────────
   if (!isLoggedIn) {
@@ -47,7 +47,7 @@ function App() {
     }
     return (
       <LoginPage
-        onLogin={() => setIsLoggedIn(true)}
+        onLogin={(userData) => { setUser(userData); setIsLoggedIn(true); }}
         onForgot={() => setAuthPage("forgot")}
       />
     );

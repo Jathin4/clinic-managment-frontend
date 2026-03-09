@@ -8,16 +8,18 @@ export const AppProvider = ({ children }) => {
   const [page, setPage]         = useState("dashboard");
   const [authPage, setAuthPage] = useState("login");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser]         = useState(null);
   const [collapsed, setCollapsed]   = useState(false);
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setUser(null);
     setPage("dashboard");
     setAuthPage("login");
   };
 
   return (
-    <AppContext.Provider value={{ page, setPage, authPage, setAuthPage, isLoggedIn, setIsLoggedIn, collapsed, setCollapsed, handleLogout }}>
+    <AppContext.Provider value={{ page, setPage, authPage, setAuthPage, isLoggedIn, setIsLoggedIn, user, setUser, collapsed, setCollapsed, handleLogout }}>
       {children}
     </AppContext.Provider>
   );

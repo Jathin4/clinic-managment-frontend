@@ -14,11 +14,10 @@ const PatientsPage = () => {
   const [errors, setErrors] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
  
-  const API_BASE_URL = 'http://127.0.0.1:5020';
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
   const blank = { uhid:"", first_name:"", last_name:"", email:"", phone:"", dob:"", gender:"", blood_group:"", address:"" };
   const [form, setForm] = useState(blank);
-  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 3000); };
- 
+  const showToast = (msg, type = "success") => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3000); };
   const validate = () => {
     const e = {};
     if (!form.uhid.trim())       e.uhid        = "Required";
@@ -44,11 +43,11 @@ const PatientsPage = () => {
   const fetchPatients = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_BASE_URL}/patient_read?clinic_id=1`);
+      const res = await fetch(`${baseUrl}/patient_read?clinic_id=1`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setPatients(Array.isArray(data) ? data : []);
-    } catch { showToast("Failed to load patients"); }
+    } catch { showToast("Failed to load patients", "error"); }
     finally { setIsLoading(false); }
   };
  
@@ -64,7 +63,7 @@ const PatientsPage = () => {
   const handleSave = async () => {
     if (!validate()) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/patient_create_update`, {
+      const res = await fetch(`${baseUrl}/patient_create_update`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: editingPatient?.id || null, clinic_id: 1, created_by: "admin", ...form })
       });
@@ -73,20 +72,20 @@ const PatientsPage = () => {
       showToast(editingPatient ? "Patient updated" : "Patient added");
       setShowModal(false); setForm(blank); setEditingPatient(null); setErrors({});
       fetchPatients();
-    } catch (e) { showToast(e.message || "Operation failed"); }
+    } catch (e) { showToast(e.message || "Operation failed", "error"); }
   };
  
   const handleDelete = async id => {
     if (!window.confirm("Delete this patient?")) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/patients_delete/`, {
+      const res = await fetch(`${baseUrl}/patients_delete/`, {
         method: "DELETE", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, modified_by: "admin" })
       });
       if (!res.ok) throw new Error();
       showToast("Patient deleted");
       fetchPatients();
-    } catch { showToast("Failed to delete patient"); }
+    } catch { showToast("Failed to delete patient", "error"); }
   };
  
   const filtered = patients.filter(p => {
@@ -143,7 +142,7 @@ const PatientsPage = () => {
             ))}
           />
  
-          {/* Pagination */}
+         
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
             <span className="text-sm text-slate-500">
               Showing <b>{filtered.length === 0 ? 0 : (page-1)*ITEMS_PER_PAGE+1}–{Math.min(page*ITEMS_PER_PAGE, filtered.length)}</b> of <b>{filtered.length}</b>
@@ -198,7 +197,7 @@ const PatientsPage = () => {
         </Modal>
       )}
  
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
