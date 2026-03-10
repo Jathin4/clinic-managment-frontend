@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useApp } from "../context/AppContext";
-import { CURRENT_USER } from "../data/mockData";
 import { SIDEBAR_ITEMS } from "./Sidebar";
 import Icons from "./Icons";
 
 const TopNav = () => {
-  const { page, setPage, collapsed, setCollapsed, handleLogout } = useApp();
+  const { page, setPage, collapsed, setCollapsed, handleLogout, user } = useApp();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUser,   setShowUser]   = useState(false);
   const pageTitle = SIDEBAR_ITEMS.find(i => i.id === page)?.label || "Dashboard";
@@ -48,11 +47,11 @@ const TopNav = () => {
           onClick={() => { setShowUser(!showUser); setShowNotifs(false); }}
         >
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: "linear-gradient(135deg,#0E6C68,#14A3A0)" }}>
-            {CURRENT_USER.initials}
+            {user?.full_name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U'}
           </div>
           <div className="hidden sm:block text-left">
-            <div className="text-xs font-semibold text-slate-700 leading-tight">{CURRENT_USER.name}</div>
-            <div className="text-xs text-slate-400 leading-tight">{CURRENT_USER.role}</div>
+            <div className="text-xs font-semibold text-slate-700 leading-tight">{user?.full_name || 'User'}</div>
+            <div className="text-xs text-slate-400 leading-tight">{user?.role || ''}</div>
           </div>
           <Icons.ChevronDown />
         </button>
@@ -61,11 +60,11 @@ const TopNav = () => {
             <div className="px-3 py-3 mb-1 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: "linear-gradient(135deg,#0E6C68,#14A3A0)" }}>
-                  {CURRENT_USER.initials}
+                  {user?.full_name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U'}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-800 truncate">{CURRENT_USER.name}</div>
-                  <div className="text-xs text-slate-400 truncate">{CURRENT_USER.email}</div>
+                  <div className="text-sm font-semibold text-slate-800 truncate">{user?.full_name || 'User'}</div>
+                  <div className="text-xs text-slate-400 truncate">{user?.email || ''}</div>
                 </div>
               </div>
             </div>

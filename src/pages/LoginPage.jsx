@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { CURRENT_USER } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, Btn, Input, Toast, PageHeader } from '../components/UI';
+
+const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
 const LoginPage = ({ onLogin, onForgot }) => {
-  const [email, setEmail] = useState("admin@clinicos.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -46,6 +46,94 @@ const LoginPage = ({ onLogin, onForgot }) => {
     setLoading(false);
   }
 };
+  // First-login password change state
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [passError, setPassError] = useState("");
+
+  const handleLogin = async () => {
+    setError('');
+    if (!email.trim() || !password) {
+      setError('Email and Password are required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth_login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data?.ok) {
+        const user = data.user;
+        // First login — last_login is null → force password change
+        if (!user.last_login) {
+          setPendingUser(user);
+          setShowSetPassword(true);
+          setPassword('');
+        } else {
+          setPassword('');
+          onLogin(user);
+        }
+      } else {
+        setPassword('');
+        setError(data?.detail || 'Invalid credentials. Please try again.');
+      }
+    } catch (err) {
+      console.error('Login error', err);
+      setPassword('');
+      setError('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    setPassError('');
+    if (!newPass || !confirmPass) {
+      setPassError('Both fields are required');
+      return;
+    }
+    if (newPass.length < 6) {
+      setPassError('Password must be at least 6 characters');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setPassError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth_set_password/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: pendingUser.id, new_password: newPass }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data?.ok) {
+        setShowSetPassword(false);
+        setNewPass('');
+        setConfirmPass('');
+        onLogin(pendingUser);
+      } else {
+        setPassError(data?.detail || 'Failed to set password. Try again.');
+      }
+    } catch (err) {
+      console.error('Set password error', err);
+      setPassError('Server error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex" style={{ background: "#F8FAFA" }}>
@@ -151,6 +239,73 @@ const LoginPage = ({ onLogin, onForgot }) => {
           </div>
         </div>
       </div>
+
+      {/* ── Set Password Modal (first login) ────────────────────────── */}
+      {showSetPassword && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0E6C68, #14A3A0)" }}>
+                <Icons.Settings />
+              </div>
+              <h2 className="text-xl font-bold text-slate-800">Set Your Password</h2>
+            </div>
+            <p className="text-slate-500 text-sm mb-6">
+              Welcome, <strong>{pendingUser?.full_name}</strong>! Since this is your first login, please set a new password.
+            </p>
+
+            {passError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex items-center gap-2">
+                <Icons.AlertTriangle />{passError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNewPass ? "text" : "password"}
+                    value={newPass}
+                    onChange={e => setNewPass(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-50 transition-all pr-12"
+                  />
+                  <button onClick={() => setShowNewPass(!showNewPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showNewPass ? <Icons.EyeOff /> : <Icons.Eye />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPass ? "text" : "password"}
+                    value={confirmPass}
+                    onChange={e => setConfirmPass(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-50 transition-all pr-12"
+                  />
+                  <button onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showConfirmPass ? <Icons.EyeOff /> : <Icons.Eye />}
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleSetPassword}
+                disabled={loading}
+                className="w-full py-3.5 rounded-xl font-semibold text-white transition-all text-sm flex items-center justify-center gap-2"
+                style={{ background: loading ? "#94a3b8" : "linear-gradient(135deg, #0E6C68, #14A3A0)" }}
+              >
+                {loading ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>Setting password...</>
+                ) : "Set Password & Continue"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

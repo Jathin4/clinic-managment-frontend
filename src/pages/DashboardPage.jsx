@@ -13,10 +13,11 @@ import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const DashboardPage = () => {
-  const { setPage } = useApp();
+  const { setPage, user } = useApp();
+  const today = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Welcome back, Dr. Rajesh Agarwal  •  March 4, 2025" actions={
+      <PageHeader title="Dashboard" subtitle={`Welcome back, ${user?.full_name || 'Doctor'}  •  ${today}`} actions={
         <Btn onClick={() => setPage("appointments")}><Icons.Plus />New Appointment</Btn>
       }/>
       <div className="grid grid-cols-5 gap-4 mb-6">

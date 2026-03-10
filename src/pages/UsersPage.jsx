@@ -16,8 +16,7 @@ const UsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 const [toast, setToast] = useState({ message: "", type: "" });
   const [editingUser, setEditingUser] = useState(null);
-
-  const API_BASE_URL = 'http://127.0.0.1:5020';
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   const blank = { full_name:"", email:"", phone:"", role:"", clinic_id:"1", is_active:true };
   const [form, setForm] = useState(blank);
@@ -131,7 +130,7 @@ if (!response.ok) {
       full_name: form.full_name,
       email: form.email,
       phone: form.phone,
-      password_hash: editingUser ? "" : "123456",
+      password_hash: editingUser ? "" : "",
       role: form.role,
       is_active: true,
       user: "admin"
