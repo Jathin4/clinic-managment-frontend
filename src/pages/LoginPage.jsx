@@ -10,7 +10,42 @@ const LoginPage = ({ onLogin, onForgot }) => {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const API_BASE_URL = "http://127.0.0.1:5020";
 
+ const handleLogin = async () => {
+  setLoading(true);
+  setError("");
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth_login/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email,
+        password: password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Login failed");
+    }
+
+    // store user info
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    // call parent login handler
+    onLogin(data.user);
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
   // First-login password change state
   const [showSetPassword, setShowSetPassword] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);

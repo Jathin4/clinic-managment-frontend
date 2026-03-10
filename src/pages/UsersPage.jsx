@@ -16,7 +16,6 @@ const UsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 const [toast, setToast] = useState({ message: "", type: "" });
   const [editingUser, setEditingUser] = useState(null);
-
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   const blank = { full_name:"", email:"", phone:"", role:"", clinic_id:"1", is_active:true };
