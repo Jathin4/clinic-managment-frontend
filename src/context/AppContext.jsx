@@ -5,7 +5,17 @@ const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
 
 export const AppProvider = ({ children }) => {
-  const [page, setPage]         = useState("dashboard");
+
+  // Restore saved page
+  const [pageState, setPageState] = useState(
+    localStorage.getItem("page") || "dashboard"
+  );
+
+  const setPage = (newPage) => {
+    localStorage.setItem("page", newPage);
+    setPageState(newPage);
+  };
+
   const [authPage, setAuthPage] = useState("login");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser]         = useState(null);
@@ -17,6 +27,8 @@ export const AppProvider = ({ children }) => {
     setUser(null);
     setPage("dashboard");
     setAuthPage("login");
+
+    localStorage.removeItem("page");
   };
 
   return (

@@ -14,9 +14,8 @@ const UsersPage = () => {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-const [toast, setToast] = useState({ message: "", type: "" });
+  const [toast, setToast] = useState({ message: "", type: "" });
   const [editingUser, setEditingUser] = useState(null);
-
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   const blank = { full_name:"", email:"", phone:"", role:"", clinic_id:"1", is_active:true };
@@ -29,13 +28,13 @@ const [toast, setToast] = useState({ message: "", type: "" });
 
   /* ---------------- TOAST ---------------- */
 
- const showToast = (msg, type = "success") => {
-  setToast({ message: msg, type });
+  const showToast = (msg, type = "success") => {
+    setToast({ message: msg, type });
 
-  setTimeout(() => {
-    setToast({ message: "", type: "" });
-  }, 3000);
-};
+    setTimeout(() => {
+      setToast({ message: "", type: "" });
+    }, 3000);
+  };
 
   /* ---------------- FETCH USERS ---------------- */
 
@@ -55,16 +54,16 @@ const [toast, setToast] = useState({ message: "", type: "" });
         `${API_BASE_URL}/users_read_by_clinic/?clinic_id=${clinicId}`
       );
 
-     if (response.status === 400) {
-  showToast(data.error || "Bad Request", "warning");
-  return;
-}
-
-if (!response.ok) {
-  throw new Error(data.error || "Failed to save user");
-}
-
       const data = await response.json();
+
+      if (response.status === 400) {
+        showToast(data.error || "Bad Request", "warning");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save user");
+      }
 
       setUsers(data.users || []);
 
@@ -116,60 +115,60 @@ if (!response.ok) {
 
   /* ---------------- ADD / UPDATE USER ---------------- */
 
- const handleAdd = async () => {
+  const handleAdd = async () => {
 
-  if (!form.full_name || !form.email) {
-    showToast("Full name and email are required");
-    return;
-  }
-
-  try {
-
-    const payload = {
-      id: editingUser ? editingUser.id : null,
-      clinic_id: 1,
-      full_name: form.full_name,
-      email: form.email,
-      phone: form.phone,
-      password_hash: editingUser ? "" : "",
-      role: form.role,
-      is_active: true,
-      user: "admin"
-    };
-
-    const response = await fetch(`${API_BASE_URL}/users_create_update/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to save user");
+    if (!form.full_name || !form.email) {
+      showToast("Full name and email are required");
+      return;
     }
 
-   showToast(
-  editingUser ? "User updated successfully" : "User added successfully",
-  "success"
-);
+    try {
 
-    setShowModal(false);
-    setForm(blank);
-    setEditingUser(null);
+      const payload = {
+        id: editingUser ? editingUser.id : null,
+        clinic_id: 1,
+        full_name: form.full_name,
+        email: form.email,
+        phone: form.phone,
+        password_hash: editingUser ? "" : "",
+        role: form.role,
+        is_active: true,
+        user: "admin"
+      };
 
-    fetchUsers();
+      const response = await fetch(`${API_BASE_URL}/users_create_update/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
 
-  } catch (error) {
+      const data = await response.json();
 
-    console.error("Add user error:", error);
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save user");
+      }
 
-    showToast(error.message || "Something went wrong", "error");
+      showToast(
+        editingUser ? "User updated successfully" : "User added successfully",
+        "success"
+      );
 
-  }
-};
+      setShowModal(false);
+      setForm(blank);
+      setEditingUser(null);
+
+      fetchUsers();
+
+    } catch (error) {
+
+      console.error("Add user error:", error);
+
+      showToast(error.message || "Something went wrong", "error");
+
+    }
+  };
 
   /* ---------------- DELETE USER ---------------- */
 
@@ -181,14 +180,12 @@ if (!response.ok) {
     try {
 
       const requestBody = {
-
         user_id: userId,
         clinic_id: 1,
         user: "admin"
       };
 
       const response = await fetch(`${API_BASE_URL}/users_soft_delete_by_clinic/`, {
-
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -200,7 +197,7 @@ if (!response.ok) {
 
       if (!response.ok) throw new Error(data.error || "Delete failed");
 
-     showToast("User set to Inactive successfully", "success");
+      showToast("User set to Inactive successfully", "success");
 
       fetchUsers();
 
@@ -223,8 +220,7 @@ if (!response.ok) {
 
   return (
 
-    <div>
-      
+    <div className="bg-slate-50 min-h-screen">
 
       <PageHeader
         title="Users & Staff"
@@ -242,125 +238,126 @@ if (!response.ok) {
         }
       />
 
-      {isLoading ? (
+      <DataTable
 
-        <div className="text-center py-6 text-gray-500">
-          Loading users...
-        </div>
+        title="User List"
+        subtitle={`${users.length} users across all clinics`}
 
-      ) : (
+        search={search}
 
-        <DataTable
+        onSearch={(v)=>{
+          setSearch(v);
+          setCurrentPage(1);
+        }}
 
-          title="User List"
-          subtitle={`${users.length} users across all clinics`}
+        searchPlaceholder="Search by name, email, role…"
 
-          search={search}
+        actions={<Btn variant="secondary"><Icons.Download/>Export</Btn>}
 
-          onSearch={(v)=>{
-            setSearch(v);
-            setCurrentPage(1);
-          }}
+        columns={[
+          "Full Name",
+          "Email",
+          "Phone",
+          "Role",
+          "Status",
+          "Last Login",
+          "Actions"
+        ]}
 
-          searchPlaceholder="Search by name, email, role…"
-
-          actions={<Btn variant="secondary"><Icons.Download/>Export</Btn>}
-
-          columns={[
-            "Full Name",
-            "Email",
-            "Phone",
-            "Role",
-            "Status",
-            "Last Login",
-            "Actions"
-          ]}
-
-          rows={filteredUsers
-            .slice((currentPage-1)*pageSize,currentPage*pageSize)
-            .map(u=>{
-
-              return (
-
-                <TR key={u.id}>
-
-                  <TD>
-                    <div className="flex items-center gap-3">
-
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                        style={{background:"linear-gradient(135deg,#0E6C68,#14A3A0)"}}
-                      >
-                        {u.full_name.split(" ").map(n=>n[0]).join("").slice(0,2)}
-                      </div>
-
-                      <span className="font-semibold text-slate-700">
-                        {u.full_name}
-                      </span>
-
-                    </div>
-                  </TD>
-
-                  <TD>{u.email}</TD>
-
-                  <TD>{u.phone}</TD>
-
-                  <TD>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${roleColor(u.role)}`}>
-                      {u.role}
-                    </span>
-                  </TD>
-
-                  <TD>
-                    <Badge status={u.is_active ? "Active" : "Inactive"} />
-                  </TD>
-
-                  <TD muted>{u.last_login}</TD>
-
-                  <TD>
-
-                    <div className="flex gap-1">
-
-                      <button
-                        onClick={() => handleEdit(u)}
-                        className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors text-slate-400"
-                      >
-                        <Icons.Edit/>
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteClick(u.id)}
-                        className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors text-slate-400"
-                      >
-                        <Icons.Trash/>
-                      </button>
-
-                    </div>
-
-                  </TD>
-
+        rows={
+          isLoading
+            ? [
+                <TR key="loading">
+                  <td colSpan={7} className="text-center py-8 text-slate-400">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-teal-700 mr-2 align-middle"></div>
+                    Loading users...
+                  </td>
                 </TR>
-              );
-            })}
+              ]
+            : filteredUsers.length === 0
+              ? [
+                  <TR key="empty">
+                    <td colSpan={7} className="text-center py-8 text-slate-400">
+                      No users found
+                    </td>
+                  </TR>
+                ]
+              : filteredUsers
+                  .slice((currentPage-1)*pageSize,currentPage*pageSize)
+                  .map(u=>(
+                    <TR key={u.id}>
 
-          currentPage={currentPage}
+                      <TD>
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                            style={{background:"linear-gradient(135deg,#0E6C68,#14A3A0)"}}
+                          >
+                            {u.full_name.split(" ").map(n=>n[0]).join("").slice(0,2)}
+                          </div>
 
-          totalPages={Math.ceil(filteredUsers.length / pageSize)}
+                          <span className="font-semibold text-slate-700">
+                            {u.full_name}
+                          </span>
+                        </div>
+                      </TD>
 
-          onPageChange={setCurrentPage}
+                      <TD>{u.email}</TD>
 
-          totalItems={filteredUsers.length}
+                      <TD>{u.phone}</TD>
 
-          pageSize={pageSize}
+                      <TD>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${roleColor(u.role)}`}>
+                          {u.role}
+                        </span>
+                      </TD>
 
-          onPageSizeChange={(size)=>{
-            setPageSize(size);
-            setCurrentPage(1);
-          }}
+                      <TD>
+                        <Badge status={u.is_active ? "Active" : "Inactive"} />
+                      </TD>
 
-        />
+                      <TD muted>{u.last_login}</TD>
 
-      )}
+                      <TD>
+                        <div className="flex gap-1">
+
+                          <button
+                            onClick={() => handleEdit(u)}
+                            className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors text-slate-400"
+                          >
+                            <Icons.Edit/>
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteClick(u.id)}
+                            className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors text-slate-400"
+                          >
+                            <Icons.Trash/>
+                          </button>
+
+                        </div>
+                      </TD>
+
+                    </TR>
+                  ))
+        }
+
+        currentPage={currentPage}
+
+        totalPages={Math.ceil(filteredUsers.length / pageSize)}
+
+        onPageChange={setCurrentPage}
+
+        totalItems={filteredUsers.length}
+
+        pageSize={pageSize}
+
+        onPageSizeChange={(size)=>{
+          setPageSize(size);
+          setCurrentPage(1);
+        }}
+
+      />
 
       {showModal && (
 
@@ -425,13 +422,13 @@ if (!response.ok) {
         </Modal>
       )}
 
-     {toast.message && (
-  <Toast
-    message={toast.message}
-    type={toast.type}
-    onClose={() => setToast({ message: "", type: "" })}
-  />
-)}
+      {toast.message && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ message: "", type: "" })}
+        />
+      )}
 
     </div>
   );

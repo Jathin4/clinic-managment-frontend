@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import Icons from '../components/Icons';
-
+ 
 const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
-
+ 
 const LoginPage = ({ onLogin, onForgot }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
+ 
   // First-login password change state
   const [showSetPassword, setShowSetPassword] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
@@ -20,13 +20,23 @@ const LoginPage = ({ onLogin, onForgot }) => {
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [passError, setPassError] = useState("");
 
+
+  useEffect(() => {
+  const storedUser = sessionStorage.getItem("user");
+
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    onLogin(user);   // go directly to dashboard
+  }
+}, [onLogin]);
+ 
   const handleLogin = async () => {
     setError('');
     if (!email.trim() || !password) {
       setError('Email and Password are required');
       return;
     }
-
+ 
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth_login/`, {
@@ -35,9 +45,23 @@ const LoginPage = ({ onLogin, onForgot }) => {
         body: JSON.stringify({ email: email.trim(), password }),
       });
       const data = await res.json();
-
+ 
       if (res.ok && data?.ok) {
-        const user = data.user;
+ const user = data.user;
+
+// Create session object
+const sessionUser = {
+  id: user.id,
+  clinic_id: user.clinic_id,
+  clinic_name: user.clinic_name,
+  full_name: user.full_name,
+  email: user.email,
+  role: user.role,
+  last_login: user.last_login
+};
+
+// Save in session
+sessionStorage.setItem("user", JSON.stringify(sessionUser));
         // First login — last_login is null → force password change
         if (!user.last_login) {
           setPendingUser(user);
@@ -60,6 +84,8 @@ const LoginPage = ({ onLogin, onForgot }) => {
     }
   };
 
+  
+ 
   const handleSetPassword = async () => {
     setPassError('');
     if (!newPass || !confirmPass) {
@@ -74,7 +100,7 @@ const LoginPage = ({ onLogin, onForgot }) => {
       setPassError('Passwords do not match');
       return;
     }
-
+ 
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth_set_password/`, {
@@ -83,12 +109,27 @@ const LoginPage = ({ onLogin, onForgot }) => {
         body: JSON.stringify({ user_id: pendingUser.id, new_password: newPass }),
       });
       const data = await res.json();
+ 
+     if (res.ok && data?.ok) {
 
-      if (res.ok && data?.ok) {
-        setShowSetPassword(false);
-        setNewPass('');
-        setConfirmPass('');
-        onLogin(pendingUser);
+  // ✅ Save session
+  const sessionUser = {
+  id: pendingUser.id,
+  clinic_id: pendingUser.clinic_id,
+  clinic_name: pendingUser.clinic_name,
+  full_name: pendingUser.full_name,
+  email: pendingUser.email,
+  role: pendingUser.role,
+  last_login: pendingUser.last_login
+};
+
+sessionStorage.setItem("user", JSON.stringify(sessionUser));
+
+  setShowSetPassword(false);
+  setNewPass('');
+  setConfirmPass('');
+  onLogin(pendingUser);
+
       } else {
         setPassError(data?.detail || 'Failed to set password. Try again.');
       }
@@ -99,7 +140,7 @@ const LoginPage = ({ onLogin, onForgot }) => {
       setLoading(false);
     }
   };
-
+ 
   return (
     <div className="min-h-screen flex" style={{ background: "#F8FAFA" }}>
       {/* Left Panel */}
@@ -133,7 +174,7 @@ const LoginPage = ({ onLogin, onForgot }) => {
           ))}
         </div>
       </div>
-
+ 
       {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
@@ -143,16 +184,16 @@ const LoginPage = ({ onLogin, onForgot }) => {
             </div>
             <span className="text-xl font-bold" style={{ color: "#0E6C68" }}>ClinicOS</span>
           </div>
-
+ 
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome back</h2>
           <p className="text-slate-500 mb-8">Sign in to your clinic dashboard</p>
-
+ 
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex items-center gap-2">
               <Icons.AlertTriangle />{error}
             </div>
           )}
-
+ 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
@@ -197,14 +238,14 @@ const LoginPage = ({ onLogin, onForgot }) => {
               ) : "Sign in to ClinicOS"}
             </button>
           </div>
-
+ 
           <div className="mt-6 text-center">
             <span className="text-sm text-slate-500">Don't have access? </span>
             <button className="text-sm font-semibold" style={{ color: "#0E6C68" }}>Request access →</button>
           </div>
         </div>
       </div>
-
+ 
       {/* ── Set Password Modal (first login) ────────────────────────── */}
       {showSetPassword && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -218,13 +259,13 @@ const LoginPage = ({ onLogin, onForgot }) => {
             <p className="text-slate-500 text-sm mb-6">
               Welcome, <strong>{pendingUser?.full_name}</strong>! Since this is your first login, please set a new password.
             </p>
-
+ 
             {passError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex items-center gap-2">
                 <Icons.AlertTriangle />{passError}
               </div>
             )}
-
+ 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">New Password</label>
@@ -270,11 +311,12 @@ const LoginPage = ({ onLogin, onForgot }) => {
           </div>
         </div>
       )}
-
+ 
     </div>
   );
 };
-
-
-
+ 
+ 
+ 
 export default LoginPage;
+ 

@@ -1,128 +1,255 @@
-import { useState } from 'react';
-import { useApp } from '../context/AppContext';
-import {
-  MOCK_CLINICS, MOCK_USERS, MOCK_PATIENTS, MOCK_APPOINTMENTS,
-  MOCK_ENCOUNTERS, MOCK_DIAGNOSES, MOCK_PRESCRIPTIONS, MOCK_BILLS,
-  MOCK_PAYMENTS, MOCK_MEDICINES, MOCK_AUDIT_LOGS,
-  REVENUE_DATA, DOCTOR_APPOINTMENTS, PAYMENT_MODES, PATIENT_GROWTH,
-  ptName, doctorName
-} from '../data/mockData';
+import { useState, useEffect } from 'react';
 import Icons from '../components/Icons';
-import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
-import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-
+import { Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD, Modal } from '../components/UI';
+ 
+const ITEMS_PER_PAGE = 10;
+const API = 'http://127.0.0.1:5020';
+ 
 const EncountersPage = () => {
-  const [encs, setEncs] = useState(MOCK_ENCOUNTERS);
+  const [encounters, setEncounters] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [viewEnc, setViewEnc] = useState(null);
-  const blank = { patient_id:"", doctor_id:"", appointment_id:"", chief_complaint:"", notes:"", follow_up_date:"", clinic_id:"C001" };
-  const [form, setForm] = useState(blank);
+  const [isLoading, setIsLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [editingEncounter, setEditingEncounter] = useState(null);
+  const [errors, setErrors] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const f = v => encs.filter(e => {
-    const pn = ptName(MOCK_PATIENTS.find(p=>p.id===e.patient_id)||{first_name:"",last_name:""});
-    return pn.toLowerCase().includes(v.toLowerCase()) || e.chief_complaint.toLowerCase().includes(v.toLowerCase());
-  });
-  const handleAdd = () => {
-    const n=encs.length+1;
-    setEncs(p=>[...p,{...form,id:`ENC00${n}`,visit_date:"2025-03-04 10:00",created_at:"2025-03-04"}]);
-    setShowModal(false); setForm(blank);
+ 
+  const blank = { patient_id: "", doctor_id: "", appointment_id: "", visit_date: "", follow_up_date: "", chief_complaint: "", notes: "" };
+  const [form, setForm] = useState(blank);
+ 
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const setField = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(p => ({ ...p, [k]: undefined })); };
+  const closeModal = () => { setShowModal(false); setEditingEncounter(null); setForm(blank); setErrors({}); };
+ 
+  const validate = () => {
+    const e = {};
+    if (!form.patient_id) e.patient_id = "Required";
+    if (!form.visit_date) e.visit_date = "Required";
+    if (!form.chief_complaint.trim()) e.chief_complaint = "Required";
+    setErrors(e);
+    return !Object.keys(e).length;
   };
-  if (viewEnc) {
-    const dxs = MOCK_DIAGNOSES.filter(d=>d.encounter_id===viewEnc.id);
-    const rxs = MOCK_PRESCRIPTIONS.filter(r=>r.encounter_id===viewEnc.id);
-    const pat = MOCK_PATIENTS.find(p=>p.id===viewEnc.patient_id);
-    return (
-      <div>
-        <button onClick={()=>setViewEnc(null)} className="flex items-center gap-2 text-sm text-slate-500 hover:text-teal-700 mb-4 transition-colors"><Icons.ChevronLeft/>Back to Encounters</button>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-4">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <div className="text-lg font-bold text-slate-800">{pat?ptName(pat):"—"}</div>
-              <div className="text-sm text-slate-500">{pat?.uhid} • {viewEnc.visit_date} • {doctorName(viewEnc.doctor_id)}</div>
-            </div>
-            <Btn variant="secondary"><Icons.Download/>Print Summary</Btn>
-          </div>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-1">Chief Complaint</div>
-              <div className="text-sm font-medium text-slate-700">{viewEnc.chief_complaint}</div>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-1">Follow-up Date</div>
-              <div className="text-sm font-medium text-slate-700">{viewEnc.follow_up_date||"—"}</div>
-            </div>
-            <div className="col-span-2 bg-gray-50 rounded-xl p-4">
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-1">Clinical Notes</div>
-              <div className="text-sm text-slate-600">{viewEnc.notes}</div>
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <DataTable title={`Diagnoses (${dxs.length})`} columns={["ICD Code","Description"]}
-            rows={dxs.map(d=><TR key={d.id}><TD mono bold>{d.icd_code}</TD><TD>{d.description}</TD></TR>)}
-            empty="No diagnoses recorded"
-          />
-          <DataTable title={`Prescriptions (${rxs.length})`} columns={["Medicine","Dosage","Frequency","Duration","Instructions"]}
-            rows={rxs.map(r=><TR key={r.id}><TD bold>{r.medicine_name}</TD><TD>{r.dosage}</TD><TD>{r.frequency}</TD><TD>{r.duration}</TD><TD muted>{r.instructions}</TD></TR>)}
-            empty="No prescriptions"
-          />
-        </div>
-      </div>
-    );
-  }
+ 
+  const fetchEncounters = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${API}/encountersread?clinic_id=1`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setEncounters(Array.isArray(data) ? data : []);
+    } catch { showToast("Failed to load encounters"); }
+    finally { setIsLoading(false); }
+  };
+ 
+  const fetchPatients = async () => {
+    try {
+      const res = await fetch(`${API}/patient_read?clinic_id=1`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setPatients(Array.isArray(data) ? data.map(p => ({
+        value: p.id,
+        label: `${p.first_name} ${p.last_name ?? ""}`.trim()
+      })) : []);
+    } catch { showToast("Failed to load patients"); }
+  };
+ 
+ 
+  const fetchDoctors = async () => {
+    try {
+      const res = await fetch(`${API}/doctorsread`);  // removed trailing slash
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      console.log("doctors data:", data); // ← check this in browser console
+      setDoctors(Array.isArray(data) ? data.map(d => ({
+        value: String(d.id ?? d.doctor_id ?? d.user_id),
+        label: d.full_name ?? d.name ?? `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim()
+      })) : []);
+    } catch (e) {
+      console.log("doctors error:", e);
+      showToast("Failed to load doctors");
+    }
+  };
+ 
+  useEffect(() => { fetchEncounters(); fetchPatients(); fetchDoctors(); }, []);
+  useEffect(() => { setCurrentPage(1); }, [search]);
+ 
+  const patientName = id => patients.find(p => String(p.value) === String(id))?.label || "—";
+  const doctorName  = id => doctors.find(d => String(d.value) === String(id))?.label  || "—";
+ 
+  const handleEdit = enc => {
+    setEditingEncounter(enc);
+    setForm({
+      patient_id:      enc.patient_id      ?? "",
+      doctor_id:       enc.doctor_id       ?? "",
+      appointment_id:  enc.appointment_id  ?? "",
+      visit_date:      enc.visit_date      ? String(enc.visit_date).split("T")[0] : "",
+      follow_up_date:  enc.follow_up_date  ? String(enc.follow_up_date).split("T")[0] : "",
+      chief_complaint: enc.chief_complaint ?? "",
+      notes:           enc.notes           ?? "",
+    });
+    setErrors({});
+    setShowModal(true);
+  };
+ 
+  const handleSave = async () => {
+    if (!validate()) return;
+    try {
+      const res = await fetch(`${API}/encounters_create_update/`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingEncounter?.id ?? null, clinic_id: 1, created_by: "admin",
+          patient_id:      Number(form.patient_id),
+          doctor_id:       form.doctor_id      ? Number(form.doctor_id)      : null,
+          appointment_id:  form.appointment_id ? Number(form.appointment_id) : null,
+          visit_date:      form.visit_date,
+          follow_up_date:  form.follow_up_date || null,
+          chief_complaint: form.chief_complaint,
+          notes:           form.notes,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showToast(editingEncounter ? "Encounter updated" : "Encounter added");
+      closeModal();
+      fetchEncounters();
+    } catch (e) { showToast(e.message || "Operation failed"); }
+  };
+ 
+  const handleDelete = async id => {
+    if (!window.confirm("Delete this encounter?")) return;
+    setEncounters(prev => prev.filter(enc => enc.id !== id));
+    showToast("Encounter deleted");
+    try {
+      const res = await fetch(`${API}/encounter_delete/`, {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, modified_by: "admin" })
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { fetchEncounters(); showToast(data?.error || "Failed to delete encounter"); }
+    } catch { fetchEncounters(); showToast("Failed to delete encounter"); }
+  };
+ 
+  const filtered = encounters.filter(enc =>
+    [enc.id, patientName(enc.patient_id), doctorName(enc.doctor_id), enc.chief_complaint, enc.visit_date]
+      .some(v => String(v ?? "").toLowerCase().includes(search.toLowerCase()))
+  );
+ 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const page = Math.min(currentPage, totalPages);
+  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const Err = ({ f }) => errors[f] ? <p className="text-red-500 text-xs mt-1">{errors[f]}</p> : null;
+ 
   return (
     <div>
-      <PageHeader title="Encounters" subtitle="Clinical encounter records" actions={<Btn onClick={()=>setShowModal(true)}><Icons.Plus/>New Encounter</Btn>}/>
-      <DataTable
-        title="Encounter List" subtitle={`${encs.length} encounters`}
-        search={search} onSearch={v=>{setSearch(v);setCurrentPage(1);}} searchPlaceholder="Search patient, complaint…"
-        columns={["Encounter ID","Patient","Doctor","Visit Date","Chief Complaint","Follow-up","Actions"]}
-        rows={f(search).slice((currentPage-1)*pageSize,currentPage*pageSize).map(e=>{
-          const pat=MOCK_PATIENTS.find(p=>p.id===e.patient_id);
-          return (
-            <TR key={e.id}>
-              <TD mono bold>{e.id}</TD>
-              <TD bold>{pat?ptName(pat):"—"}</TD>
-              <TD>{doctorName(e.doctor_id)}</TD>
-              <TD>{e.visit_date}</TD>
-              <TD>{e.chief_complaint}</TD>
-              <TD>{e.follow_up_date||"—"}</TD>
-              <TD>
-                <div className="flex gap-1">
-                  <button onClick={()=>setViewEnc(e)} className="p-1.5 hover:bg-teal-50 hover:text-teal-700 rounded-lg transition-colors text-slate-400"><Icons.Eye/></button>
-                  <button className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors text-slate-400"><Icons.Edit/></button>
-                </div>
-              </TD>
-            </TR>
-          );
-        })}
-      currentPage={currentPage} totalPages={Math.ceil(f(search).length/pageSize)} onPageChange={setCurrentPage} totalItems={f(search).length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
-      />
+      <PageHeader title="Encounters" subtitle="Manage clinical encounter records" actions={
+        <Btn onClick={() => { setEditingEncounter(null); setForm(blank); setErrors({}); setShowModal(true); }}>
+          <Icons.Plus /> New Encounter
+        </Btn>
+      } />
+ 
+      {isLoading ? <div className="text-center py-6 text-gray-500">Loading encounters...</div> : (
+        <div>
+          <DataTable
+            title="Encounter List" subtitle={`${filtered.length} encounters recorded`}
+            search={search} onSearch={setSearch} searchPlaceholder="Search by patient, doctor, complaint…"
+            columns={["ID", "Patient", "Doctor", "Visit Date", "Chief Complaint", "Follow-up Date", "Actions"]}
+            rows={paginated.map(enc => (
+              <TR key={enc.id}>
+                <TD muted>#{enc.id}</TD>
+                <TD bold>{patientName(enc.patient_id)}</TD>
+                <TD>{doctorName(enc.doctor_id)}</TD>
+                <TD muted>{enc.visit_date ? String(enc.visit_date).split("T")[0] : "—"}</TD>
+                <TD>
+                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-teal-50 text-teal-700 border-teal-100">
+                    {enc.chief_complaint || "—"}
+                  </span>
+                </TD>
+                <TD muted>{enc.follow_up_date ? String(enc.follow_up_date).split("T")[0] : "—"}</TD>
+                <TD>
+                  <div className="flex gap-1">
+                    <button onClick={() => handleEdit(enc)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors text-slate-400"><Icons.Edit /></button>
+                    <button onClick={() => handleDelete(enc.id)} className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors text-slate-400"><Icons.Trash /></button>
+                  </div>
+                </TD>
+              </TR>
+            ))}
+          />
+ 
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+            <span className="text-sm text-slate-500">
+              Showing <b>{filtered.length === 0 ? 0 : (page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)}</b> of <b>{filtered.length}</b>
+            </span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">← Prev</button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                <button key={n} onClick={() => setCurrentPage(n)}
+                  className={`w-8 h-8 text-sm rounded-lg font-medium border ${n === page ? "text-white border-transparent" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                  style={n === page ? { background: "linear-gradient(135deg,#0E6C68,#14A3A0)" } : {}}>{n}
+                </button>
+              ))}
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">Next →</button>
+            </div>
+          </div>
+        </div>
+      )}
+ 
       {showModal && (
-        <Modal title="New Encounter" onClose={()=>setShowModal(false)} wide>
+        <Modal title={editingEncounter ? "Edit Encounter" : "New Encounter"} onClose={closeModal} wide>
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Patient" value={form.patient_id} onChange={v=>setForm({...form,patient_id:v})} options={MOCK_PATIENTS.map(p=>({value:p.id,label:ptName(p)}))}/>
-            <Select label="Doctor"  value={form.doctor_id}  onChange={v=>setForm({...form,doctor_id:v})}  options={MOCK_USERS.filter(u=>u.role==="Doctor").map(u=>({value:u.id,label:u.full_name}))}/>
-            <Input label="Chief Complaint" value={form.chief_complaint} onChange={v=>setForm({...form,chief_complaint:v})} placeholder="Primary reason for visit"/>
-            <Input label="Follow-up Date" type="date" value={form.follow_up_date} onChange={v=>setForm({...form,follow_up_date:v})}/>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Patient *</label>
+              <select
+                value={form.patient_id}
+                onChange={e => setField("patient_id", e.target.value)}
+                className={`w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-teal-400 ${errors.patient_id ? "border-red-400" : "border-gray-200"}`}
+              >
+                <option value="">Select patient…</option>
+                {patients.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
+              <Err f="patient_id" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Doctor</label>
+              <select
+                value={form.doctor_id}
+                onChange={e => setField("doctor_id", e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400"
+              >
+                <option value="">Select doctor…</option>
+                {doctors.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <Input label="Visit Date *" type="date" value={form.visit_date} onChange={v => setField("visit_date", v)} className={errors.visit_date ? "border-red-400" : ""} />
+              <Err f="visit_date" />
+            </div>
+            <div>
+              <Input label="Follow-up Date" type="date" value={form.follow_up_date} onChange={v => setField("follow_up_date", v)} />
+            </div>
+            <div className="col-span-2">
+              <Input label="Chief Complaint *" value={form.chief_complaint} onChange={v => setField("chief_complaint", v)} className={errors.chief_complaint ? "border-red-400" : ""} placeholder="Primary reason for visit" />
+              <Err f="chief_complaint" />
+            </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Clinical Notes</label>
-              <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} rows={4} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 resize-none" placeholder="Detailed clinical observations, examination findings…"/>
+              <textarea value={form.notes} onChange={e => setField("notes", e.target.value)} rows={4}
+                placeholder="Detailed clinical observations…"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 resize-none" />
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
-            <Btn variant="secondary" onClick={()=>setShowModal(false)}>Cancel</Btn>
-            <Btn onClick={handleAdd} disabled={!form.patient_id||!form.chief_complaint}><Icons.Check/>Save Encounter</Btn>
+            <Btn variant="secondary" onClick={closeModal}>Cancel</Btn>
+            <Btn onClick={handleSave}><Icons.Check />{editingEncounter ? "Update Encounter" : "Save Encounter"}</Btn>
           </div>
         </Modal>
       )}
+ 
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 };
-
-
-
+ 
 export default EncountersPage;
