@@ -5,21 +5,47 @@ const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
 
 export const AppProvider = ({ children }) => {
-  const [page, setPage]         = useState("dashboard");
+
+  // Restore saved page
+  const [pageState, setPageState] = useState(
+    localStorage.getItem("page") || "dashboard"
+  );
+
+  const setPage = (newPage) => {
+    localStorage.setItem("page", newPage);
+    setPageState(newPage);
+  };
+
   const [authPage, setAuthPage] = useState("login");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser]         = useState(null);
-  const [collapsed, setCollapsed]   = useState(false);
+  const [user, setUser] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUser(null);
     setPage("dashboard");
     setAuthPage("login");
+
+    localStorage.removeItem("page");
   };
 
   return (
-    <AppContext.Provider value={{ page, setPage, authPage, setAuthPage, isLoggedIn, setIsLoggedIn, user, setUser, collapsed, setCollapsed, handleLogout }}>
+    <AppContext.Provider
+      value={{
+        page: pageState,
+        setPage,
+        authPage,
+        setAuthPage,
+        isLoggedIn,
+        setIsLoggedIn,
+        user,
+        setUser,
+        collapsed,
+        setCollapsed,
+        handleLogout
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

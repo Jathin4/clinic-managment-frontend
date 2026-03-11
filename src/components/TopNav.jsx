@@ -16,9 +16,14 @@ const TopNav = () => {
           <Icons.Menu />
         </button>
       )}
-      <div className="flex-1 flex items-center gap-4">
-       
-      </div>
+     <div className="flex-1 flex flex-col">
+  {/* Clinic Name */}
+  <div className="text-3xl font-extrabold bg-gradient-to-r from-teal-700 to-teal-400 bg-clip-text text-transparent">
+    {user?.clinic_name || "Clinic Name"}
+  </div>
+
+  
+</div>
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl text-slate-400">
           <Icons.Search />
