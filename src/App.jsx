@@ -60,9 +60,9 @@ function App() {
       style={{ background: "#F8FAFA", fontFamily: "'Inter', system-ui, sans-serif" }}
     >
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopNav />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
           {PAGE_MAP[page] ?? <DashboardPage />}
         </main>
       </div>
