@@ -26,9 +26,9 @@ export const Badge = ({ status }) => {
 
 // ── StatCard ───────────────────────────────────────────────────
 export const StatCard = ({ title, value, change, icon: IconComp, bgColor = "#DFF7F6", positive = true }) => (
-  <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer group">
-    <div className="flex items-start justify-between mb-4">
-      <div className="p-2.5 rounded-xl" style={{ backgroundColor: bgColor }}>
+  <div className="bg-white rounded-2xl p-3 sm:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer group">
+    <div className="flex items-start justify-between mb-3 sm:mb-4">
+      <div className="p-2 sm:p-2.5 rounded-xl" style={{ backgroundColor: bgColor }}>
         <IconComp />
       </div>
       <span className={`flex items-center gap-1 text-xs font-semibold ${positive ? "text-emerald-600" : "text-red-500"}`}>
@@ -36,8 +36,8 @@ export const StatCard = ({ title, value, change, icon: IconComp, bgColor = "#DFF
         {change}
       </span>
     </div>
-    <div className="text-2xl font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">{value}</div>
-    <div className="text-sm text-slate-500">{title}</div>
+    <div className="text-lg sm:text-2xl font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">{value}</div>
+    <div className="text-xs sm:text-sm text-slate-500">{title}</div>
   </div>
 );
 
@@ -110,12 +110,12 @@ export const Toast = ({ message, type = "success", onClose }) => (
 
 // ── PageHeader ─────────────────────────────────────────────────
 export const PageHeader = ({ title, subtitle, actions }) => (
-  <div className="flex items-start justify-between mb-6">
-    <div>
-      <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
-      {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
+    <div className="min-w-0">
+      <h1 className="text-xl sm:text-2xl font-bold text-slate-800">{title}</h1>
+      {subtitle && <p className="text-xs sm:text-sm text-slate-500 mt-1 truncate">{subtitle}</p>}
     </div>
-    {actions && <div className="flex items-center gap-2">{actions}</div>}
+    {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
   </div>
 );
 
@@ -171,7 +171,7 @@ export const DataTable = ({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="font-semibold text-slate-700">{title}</div>
           {subtitle && <div className="text-xs text-slate-400 mt-0.5">{subtitle}</div>}
@@ -181,7 +181,7 @@ export const DataTable = ({
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icons.Search /></div>
               <input value={search} onChange={e => onSearch(e.target.value)} placeholder={searchPlaceholder || "Search…"}
-                className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:bg-white w-56 transition-all" />
+                className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:bg-white w-full sm:w-56 transition-all" />
             </div>
           )}
           {actions}

@@ -10,6 +10,7 @@ export const AppProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser]         = useState(null);
   const [collapsed, setCollapsed]   = useState(false);
+  const [mobileSidebar, setMobileSidebar] = useState(false);
 
   const handleLogout = () => {
     setIsLoggedIn(false);
@@ -19,7 +20,7 @@ export const AppProvider = ({ children }) => {
   };
 
   return (
-    <AppContext.Provider value={{ page, setPage, authPage, setAuthPage, isLoggedIn, setIsLoggedIn, user, setUser, collapsed, setCollapsed, handleLogout }}>
+    <AppContext.Provider value={{ page, setPage, authPage, setAuthPage, isLoggedIn, setIsLoggedIn, user, setUser, collapsed, setCollapsed, mobileSidebar, setMobileSidebar, handleLogout }}>
       {children}
     </AppContext.Provider>
   );

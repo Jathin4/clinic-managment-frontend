@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import Icons from '../components/Icons';
 import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
 import CalendarView from '../components/CalendarView';
+import EncounterWorkflow from '../components/EncounterWorkflow';
 
 const API_BASE =  process.env.REACT_APP_API_BASE_URL;
 const CLINIC_ID = 1;
@@ -44,6 +45,7 @@ const AppointmentsPage = () => {
   const [currentPage,   setCurrentPage]   = useState(1);
   const [pageSize,      setPageSize]      = useState(10);
   const [deleteConfirm, setDeleteConfirm] = useState(null);  // holds id pending delete
+  const [encounterApt,  setEncounterApt]  = useState(null);  // appointment for encounter workflow
 
   const blank = { patient_id: "", doctor_id: "", appointment_date: "", slot_time: "", notes: "" };
   const [form, setForm] = useState(blank);
@@ -296,10 +298,12 @@ const AppointmentsPage = () => {
 
                   {/* Status transition buttons */}
                   {a.status === "Booked" && (
-                    <Btn size="sm" onClick={() => updateStatus(a.id, "CheckedIn")}>Check In</Btn>
+                    <Btn size="sm" onClick={async () => { await updateStatus(a.id, "CheckedIn"); setEncounterApt({...a, status: "CheckedIn"}); }}>Check In</Btn>
                   )}
                   {a.status === "CheckedIn" && (
-                    <Btn size="sm" onClick={() => updateStatus(a.id, "Completed")}>Complete</Btn>
+                    <Btn size="sm" onClick={() => setEncounterApt(a)}>
+                      <Icons.Encounter />Start Encounter
+                    </Btn>
                   )}
                   {(a.status === "Booked" || a.status === "CheckedIn") && (
                     <Btn size="sm" variant="secondary" onClick={() => updateStatus(a.id, "Cancelled")}>Cancel</Btn>
@@ -423,6 +427,18 @@ const AppointmentsPage = () => {
             </Btn>
           </div>
         </Modal>
+      )}
+
+      {/* ── Encounter workflow drawer ─────────────────────────────────────── */}
+      {encounterApt && (
+        <EncounterWorkflow
+          open={!!encounterApt}
+          onClose={() => setEncounterApt(null)}
+          appointment={encounterApt}
+          patientName={patientName(encounterApt.patient_id)}
+          doctorName={doctorName(encounterApt.doctor_id)}
+          onComplete={() => { fetchAppointments(); showToast("Encounter completed!"); }}
+        />
       )}
 
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}

@@ -14,8 +14,6 @@ const SIDEBAR_SECTIONS = [
     { id: "patients",      label: "Patients",      icon: Icons.Patient      },
     { id: "appointments",  label: "Appointments",  icon: Icons.Calendar     },
     { id: "encounters",    label: "Encounters",    icon: Icons.Encounter    },
-    { id: "diagnoses",     label: "Diagnoses",     icon: Icons.Diagnosis    },
-    { id: "prescriptions", label: "Prescriptions", icon: Icons.Prescription },
   ]},
   { section: "Billing", items: [
     { id: "bills",         label: "Bills",         icon: Icons.Bill    },
@@ -35,13 +33,31 @@ const SIDEBAR_SECTIONS = [
 export const SIDEBAR_ITEMS = SIDEBAR_SECTIONS.flatMap(s => s.items);
 
 const Sidebar = () => {
-  const { page, setPage, collapsed, setCollapsed } = useApp();
+  const { page, setPage, collapsed, setCollapsed, mobileSidebar, setMobileSidebar } = useApp();
+
+  const handleNav = (id) => {
+    setPage(id);
+    setMobileSidebar(false);
+  };
 
   return (
-    <aside
-      className="flex flex-col flex-shrink-0 h-screen overflow-hidden transition-all duration-300"
-      style={{ width: collapsed ? 68 : 252, background: "#0E6C68" }}
-    >
+    <>
+      {/* Mobile overlay backdrop */}
+      {mobileSidebar && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          onClick={() => setMobileSidebar(false)}
+        />
+      )}
+
+      <aside
+        className={`
+          flex flex-col flex-shrink-0 h-screen overflow-hidden transition-all duration-300
+          fixed lg:relative z-50
+          ${mobileSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+        style={{ width: collapsed && !mobileSidebar ? 68 : 252, background: "#0E6C68" }}
+      >
       {/* Logo */}
       <div className="flex items-center h-16 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
         {collapsed ? (
@@ -54,8 +70,11 @@ const Sidebar = () => {
               <Icons.Heart />
             </div>
             <span className="text-white font-bold text-lg tracking-tight">ClinicOS</span>
-            <button onClick={() => setCollapsed(true)} className="ml-auto p-1.5 rounded-lg" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <button onClick={() => setCollapsed(true)} className="ml-auto p-1.5 rounded-lg hidden lg:block" style={{ color: "rgba(255,255,255,0.6)" }}>
               <Icons.ChevronLeft />
+            </button>
+            <button onClick={() => setMobileSidebar(false)} className="ml-auto p-1.5 rounded-lg lg:hidden" style={{ color: "rgba(255,255,255,0.6)" }}>
+              <Icons.X />
             </button>
           </div>
         )}
@@ -75,7 +94,7 @@ const Sidebar = () => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setPage(item.id)}
+                  onClick={() => handleNav(item.id)}
                   title={collapsed ? item.label : undefined}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${collapsed ? "justify-center" : ""}`}
                   style={active ? { background: "rgba(255,255,255,0.18)", color: "white" } : { color: "rgba(255,255,255,0.72)" }}
@@ -98,7 +117,7 @@ const Sidebar = () => {
       {!collapsed ? (
         <div className="p-3" style={{ borderTop: "1px solid rgba(255,255,255,0.12)" }}>
           <button
-            onClick={() => setPage("my-profile")}
+            onClick={() => handleNav("my-profile")}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
             style={{ color: "rgba(255,255,255,0.85)" }}
             onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
@@ -116,12 +135,13 @@ const Sidebar = () => {
         </div>
       ) : (
         <div className="p-3 flex justify-center" style={{ borderTop: "1px solid rgba(255,255,255,0.12)" }}>
-          <button onClick={() => setPage("my-profile")} title={CURRENT_USER.name} className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: "rgba(255,255,255,0.25)" }}>
+          <button onClick={() => handleNav("my-profile")} title={CURRENT_USER.name} className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: "rgba(255,255,255,0.25)" }}>
             {CURRENT_USER.initials}
           </button>
         </div>
       )}
     </aside>
+    </>
   );
 };
 

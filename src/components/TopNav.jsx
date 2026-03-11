@@ -4,25 +4,30 @@ import { SIDEBAR_ITEMS } from "./Sidebar";
 import Icons from "./Icons";
 
 const TopNav = () => {
-  const { page, setPage, collapsed, setCollapsed, handleLogout, user } = useApp();
+  const { page, setPage, collapsed, setCollapsed, mobileSidebar, setMobileSidebar, handleLogout, user } = useApp();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUser,   setShowUser]   = useState(false);
   const pageTitle = SIDEBAR_ITEMS.find(i => i.id === page)?.label || "Dashboard";
 
   return (
-    <header className="h-16 bg-white border-b border-gray-100 flex items-center px-6 gap-4 relative">
+    <header className="h-14 sm:h-16 bg-white border-b border-gray-100 flex items-center px-3 sm:px-6 gap-2 sm:gap-4 relative">
+      {/* Mobile hamburger — always visible on mobile */}
+      <button onClick={() => setMobileSidebar(true)} className="p-2 hover:bg-gray-100 rounded-xl text-slate-500 transition-colors lg:hidden">
+        <Icons.Menu />
+      </button>
+      {/* Desktop collapse toggle */}
       {collapsed && (
-        <button onClick={() => setCollapsed(false)} className="p-2 hover:bg-gray-100 rounded-xl text-slate-500 transition-colors">
+        <button onClick={() => setCollapsed(false)} className="p-2 hover:bg-gray-100 rounded-xl text-slate-500 transition-colors hidden lg:flex">
           <Icons.Menu />
         </button>
       )}
       <div className="flex-1 flex items-center gap-4">
        
       </div>
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl text-slate-400">
+      <div className="flex items-center gap-1 sm:gap-2">
+        <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl text-slate-400">
           <Icons.Search />
-          <input placeholder="Quick search..." className="bg-transparent text-sm outline-none w-48 text-slate-600 placeholder:text-slate-400" />
+          <input placeholder="Quick search..." className="bg-transparent text-sm outline-none w-32 md:w-48 text-slate-600 placeholder:text-slate-400" />
         </div>
 
         {/* Notifications */}
