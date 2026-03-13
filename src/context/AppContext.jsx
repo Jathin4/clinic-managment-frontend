@@ -18,8 +18,8 @@ export const AppProvider = ({ children }) => {
 
   const [authPage, setAuthPage] = useState("login");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser]         = useState(null);
-  const [collapsed, setCollapsed]   = useState(false);
+  const [user, setUser] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileSidebar, setMobileSidebar] = useState(false);
 
   const handleLogout = () => {
@@ -32,7 +32,23 @@ export const AppProvider = ({ children }) => {
   };
 
   return (
-    <AppContext.Provider value={{ page, setPage, authPage, setAuthPage, isLoggedIn, setIsLoggedIn, user, setUser, collapsed, setCollapsed, mobileSidebar, setMobileSidebar, handleLogout }}>
+    <AppContext.Provider
+      value={{
+        page: pageState,   // ✅ FIX
+        setPage,
+        authPage,
+        setAuthPage,
+        isLoggedIn,
+        setIsLoggedIn,
+        user,
+        setUser,
+        collapsed,
+        setCollapsed,
+        mobileSidebar,
+        setMobileSidebar,
+        handleLogout
+      }}
+    >
       {children}
     </AppContext.Provider>
   );
