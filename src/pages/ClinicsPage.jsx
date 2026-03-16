@@ -12,6 +12,7 @@ const ClinicsPage = () => {
   const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const blank = { name:"", gst_number:"", phone:"", email:"", address:"", city:"", state:"", pincode:"", subscription_plan:"Starter" };
@@ -21,6 +22,32 @@ const ClinicsPage = () => {
     setToast({ message: msg, type }); 
     setTimeout(() => setToast(null), 3000); 
   };
+
+  const validateStep0 = () => {
+    const e = {};
+    if (!form.name.trim()) e.name = "Required";          // ✅ fixed: clinic_name → name
+    if (!form.gst_number.trim()) e.gst_number = "None"; // GST can be optional, so message changed to "None"
+    if (!form.address.trim()) e.address = "Required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validateStep1 = () => {
+    const e = {};
+    if (!form.email.trim())      e.email   = "Required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Invalid email";
+    if (!form.phone.trim())      e.phone   = "Required";
+    else if (!/^\d{10}$/.test(form.phone)) e.phone = "Must be 10 digits";
+    if (!form.pincode.trim())     e.pincode = "Required";
+    else if (!/^\d{6}$/.test(form.pincode)) e.pincode = "Must be 6 digits";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+  
+  const Required = () => <span className="text-red-500">*</span>;
+
+
+  const setField = (key, val) => { setForm(p => ({ ...p, [key]: val })); setErrors(p => ({ ...p, [key]: undefined })); };
 
   useEffect(() => {
     fetchClinics();
@@ -42,10 +69,7 @@ const ClinicsPage = () => {
   };
   
   const handleAdd = async () => {
-    if (!form.name) {
-      showToast("Clinic name is required", "error");
-      return;
-    }
+    if (!validateStep1()) return;  // ✅ added: validates email, phone, pincode before API call
 
     try {
       setIsSubmitting(true);
@@ -109,10 +133,7 @@ const ClinicsPage = () => {
   };
 
   const handleNext = () => {
-    if (step === 0 && !form.name) {
-      showToast("Please enter clinic name", "error");
-      return;
-    }
+    if (!validateStep0()) return;  // ✅ added: validates step 0 before proceeding
     setStep(step + 1);
   };
 
@@ -129,6 +150,8 @@ const ClinicsPage = () => {
     clinic.city?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const Err = ({ f }) => errors[f] ? <p className="text-red-500 text-xs mt-1">{errors[f]}</p> : null;
+
   return (
     <div className="bg-slate-50 min-h-screen">
       <PageHeader 
@@ -138,7 +161,7 @@ const ClinicsPage = () => {
       />
       
       <DataTable
-        
+        title="Clinic Directory"
         subtitle={`${clinics.length} clinics registered`}
         search={search}
         onSearch={v => { setSearch(v); setCurrentPage(1); }}
@@ -156,12 +179,7 @@ const ClinicsPage = () => {
               : filteredClinics.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(c => (
                 <TR key={c.id}>
                   <TD>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-gradient-to-br from-teal-600 to-teal-500">
-                        {c.name?.[0] || "C"}
-                      </div>
-                      <div className="font-semibold text-slate-800">{c.name}</div>
-                    </div>
+                    <div className="font-semibold text-slate-800">{c.name}</div>
                   </TD>
                   <TD>
                     <div className="flex flex-col gap-0.5">
@@ -189,29 +207,22 @@ const ClinicsPage = () => {
                 </TR>
               ))
         }
-      currentPage={currentPage} totalPages={Math.ceil(filteredClinics.length/pageSize)} onPageChange={setCurrentPage} totalItems={filteredClinics.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+        currentPage={currentPage} totalPages={Math.ceil(filteredClinics.length/pageSize)} onPageChange={setCurrentPage} totalItems={filteredClinics.length} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
       />
 
-      {/* Add Clinic Drawer from Right */}
       <RightDrawer 
         title="Register New Clinic" 
         open={showModal}
         onClose={handleClose}
       >
         <div className="h-full flex flex-col">
-          {/* Header with subtitle */}
           <div className="px-8 py-6 bg-gradient-to-r from-teal-50 to-blue-50 border-b border-teal-100">
             <p className="text-sm text-gray-600">Fill in the details to get your clinic up and running</p>
           </div>
 
-          {/* Progress Bar */}
-         
-
-          {/* Content Area - Scrollable */}
           <div className="flex-1 overflow-y-auto px-8 py-6">
             {step === 0 && (
               <div className="space-y-5 animate-fade-in">
-                {/* Step Header */}
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-teal-100">
                   <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600">
                     <Icons.Building />
@@ -223,36 +234,38 @@ const ClinicsPage = () => {
                 </div>
 
                 <Input 
-                  label="Clinic Name" 
+                  label={<>Clinic Name <Required /></>} 
                   value={form.name} 
                   onChange={v => setForm({...form, name: v})} 
                   placeholder="e.g. Apollo Clinic"
                   required
                 />
+                <Err f="name" />
                 <Input 
                   label="GST Number" 
                   value={form.gst_number} 
                   onChange={v => setForm({...form, gst_number: v})} 
                   placeholder="29AABCC1234F1Z5"
                 />
+                <Err f="gst_number" />
                 <Select 
                   label="Subscription Plan" 
                   value={form.subscription_plan} 
                   onChange={v => setForm({...form, subscription_plan: v})} 
-                  options={[{label:"⭐ Starter", value:"Starter"}, {label:"⭐⭐ Pro", value:"Pro"}, {label:"⭐⭐⭐ Enterprise", value:"Enterprise"}]}
+                  options={[{label:"Starter", value:"Starter"}, {label:"Pro", value:"Pro"}, {label:"Enterprise", value:"Enterprise"}]}
                 />
                 <Input 
-                  label="Address" 
+                  label={<>Address <Required /></>} 
                   value={form.address} 
                   onChange={v => setForm({...form, address: v})} 
                   placeholder="Street address"
                 />
+                <Err f="address" />
               </div>
             )}
 
             {step === 1 && (
               <div className="space-y-5 animate-fade-in">
-                {/* Step Header */}
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-blue-100">
                   <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
                     <Icons.Calendar />
@@ -263,41 +276,32 @@ const ClinicsPage = () => {
                   </div>
                 </div>
 
-                <Input 
-                  label="Phone Number" 
-                  value={form.phone} 
-                  onChange={v => setForm({...form, phone: v})} 
-                  placeholder="Phone number"
-                />
-                <Input 
-                  label="Email Address" 
-                  type="email" 
-                  value={form.email} 
-                  onChange={v => setForm({...form, email: v})} 
-                  placeholder="email@clinic.com"
-                />
+                <div>
+                  <Input label={<>Phone <Required /></>} value={form.phone} onChange={v => setField("phone", v.replace(/[^0-9]/g, "").slice(0,10))} placeholder="10-digit number" />
+                  <Err f="phone" />
+                </div>
+
+                <div>
+                  <Input label={<>Email <Required /></>} type="email" value={form.email} onChange={v => setField("email", v)} placeholder="email@example.com" />
+                  <Err f="email" />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <Input 
-                    label="City" 
+                    label={<>City <Required /></>} 
                     value={form.city} 
                     onChange={v => setForm({...form, city: v})} 
                     placeholder="City"
                   />
-                  <Input 
-                    label="State" 
-                    value={form.state} 
-                    onChange={v => setForm({...form, state: v})} 
-                    placeholder="State"
+                  <Input label = {<>State <Required /></>} value={form.state} onChange={v => setForm({...form, state: v})} placeholder="State"
                   />
                 </div>
-                <Input 
-                  label="Pincode" 
-                  value={form.pincode} 
-                  onChange={v => setForm({...form, pincode: v})} 
-                  placeholder="6-digit pincode"
-                />
 
-                {/* Info Box */}
+                <div>
+                  <Input label={<>Pincode <Required /></>} value={form.pincode} onChange={v => setField("pincode", v.replace(/[^0-9]/g, "").slice(0,6))} placeholder="6-digit pincode" />
+                  <Err f="pincode" />
+                </div>
+
                 <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex gap-3">
                   <div className="text-amber-700 text-lg flex-shrink-0">🔒</div>
                   <div>
@@ -309,7 +313,6 @@ const ClinicsPage = () => {
             )}
           </div>
 
-          {/* Footer Actions */}
           <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
             <div className="text-xs text-gray-500 font-medium">
               Step {step + 1} of 2
