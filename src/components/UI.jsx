@@ -1,4 +1,5 @@
 import Icons from "./Icons";
+import { useState, useRef, useEffect } from "react";
 
 // ── Badge ──────────────────────────────────────────────────────
 export const Badge = ({ status }) => {
@@ -55,7 +56,7 @@ export const Modal = ({ title, children, onClose, wide = false }) => (
 );
 
 // ── Btn ────────────────────────────────────────────────────────
-export const Btn = ({ children, onClick, variant = "primary", size = "md", disabled, className = "" }) => {
+export const Btn = ({ children, onClick, variant = "primary", size = "md", disabled, className = "", style }) => {
   const variants = {
     primary:   "bg-teal-700 hover:bg-teal-800 text-white shadow-sm",
     secondary: "bg-white hover:bg-gray-50 text-slate-700 border border-gray-200",
@@ -65,7 +66,7 @@ export const Btn = ({ children, onClick, variant = "primary", size = "md", disab
   const sizes = { sm: "px-3 py-1.5 text-xs", md: "px-4 py-2 text-sm", lg: "px-6 py-3 text-base" };
   return (
     <button
-      onClick={onClick} disabled={disabled}
+      onClick={onClick} disabled={disabled} style={style}
       className={`inline-flex items-center gap-2 font-semibold rounded-xl transition-all duration-150 ${variants[variant]} ${sizes[size]} ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
     >
       {children}
@@ -74,12 +75,13 @@ export const Btn = ({ children, onClick, variant = "primary", size = "md", disab
 };
 
 // ── Input ──────────────────────────────────────────────────────
-export const Input = ({ label, type = "text", value, onChange, placeholder, required }) => (
+// min prop supported for date/time inputs
+export const Input = ({ label, type = "text", value, onChange, placeholder, required, min }) => (
   <div>
     <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
     <input
       type={type} value={value} onChange={e => onChange(e.target.value)}
-      placeholder={placeholder} required={required}
+      placeholder={placeholder} required={required} min={min}
       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-50 transition-all"
     />
   </div>
@@ -120,35 +122,15 @@ export const PageHeader = ({ title, subtitle, actions }) => (
 );
 
 // ── DataTable ──────────────────────────────────────────────────
-//
-// Two usage modes:
-//
-// MODE 1 — Column-config + data array (recommended, no manual TR/TD needed):
-//   columns={[
-//     { key: 'name',   label: 'Name',   bold: true },
-//     { key: 'status', label: 'Status', render: (val, row) => <Badge status={val} /> },
-//   ]}
-//   data={filteredArray}          ← raw objects; DataTable slices for pagination
-//
-// MODE 2 — Legacy: pass pre-built JSX rows (backward compatible)
-//   columns={["Name", "Status"]}
-//   rows={pagedItems.map(item => <TR key={item.id}>...</TR>)}
-//
 export const DataTable = ({
   title, subtitle, search, onSearch, searchPlaceholder, actions, empty,
-  // Mode 1
-  columns, data,
-  // Mode 2 (legacy)
-  rows,
-  // Pagination (works for both modes)
+  columns, data, rows,
   currentPage, totalPages, onPageChange, totalItems, pageSize, onPageSizeChange, pageSizeOptions,
 }) => {
-  // Derive column header labels for both modes
-  const headers = columns.map(c => (typeof c === 'string' ? c : c.label));
+  const headers = columns.map(c => (typeof c === "string" ? c : c.label));
 
-  // Build rendered rows for column-config mode
   const dataRows = data
-    ? (data.slice(
+    ? data.slice(
         currentPage && pageSize ? (currentPage - 1) * pageSize : 0,
         currentPage && pageSize ? currentPage * pageSize : undefined
       ).map((row, i) => (
@@ -157,17 +139,17 @@ export const DataTable = ({
             const val = row[col.key];
             return (
               <td key={col.key}
-                className={`px-5 py-3.5 text-sm ${col.mono ? 'font-mono' : ''} ${col.bold ? 'font-semibold text-slate-800' : col.muted ? 'text-slate-400' : 'text-slate-600'}`}>
-                {col.render ? col.render(val, row) : val ?? '—'}
+                className={`px-5 py-3.5 text-sm ${col.mono ? "font-mono" : ""} ${col.bold ? "font-semibold text-slate-800" : col.muted ? "text-slate-400" : "text-slate-600"}`}>
+                {col.render ? col.render(val, row) : val ?? "—"}
               </td>
             );
           })}
         </tr>
-      )))
+      ))
     : null;
 
   const bodyRows = dataRows ?? rows ?? [];
-  const isEmpty = Array.isArray(bodyRows) && bodyRows.length === 0;
+  const isEmpty  = Array.isArray(bodyRows) && bodyRows.length === 0;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -203,7 +185,10 @@ export const DataTable = ({
           </tbody>
         </table>
       </div>
-      {onPageChange && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} totalItems={totalItems} pageSize={pageSize} onPageSizeChange={onPageSizeChange} pageSizeOptions={pageSizeOptions} />}
+      {onPageChange && (
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange}
+          totalItems={totalItems} pageSize={pageSize} onPageSizeChange={onPageSizeChange} pageSizeOptions={pageSizeOptions} />
+      )}
     </div>
   );
 };
@@ -227,7 +212,7 @@ export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, 
     const pages = [];
     const maxVisible = 5;
     let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
+    let end   = Math.min(totalPages, start + maxVisible - 1);
     if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
     if (start > 1) { pages.push(1); if (start > 2) pages.push("..."); }
     for (let i = start; i <= end; i++) pages.push(i);
@@ -240,46 +225,30 @@ export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, 
       <div className="flex items-center gap-3 text-sm text-slate-500">
         {totalItems != null && <span>{totalItems} total records</span>}
         {onPageSizeChange && (
-          <select
-            value={pageSize}
-            onChange={e => onPageSizeChange(Number(e.target.value))}
-            className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-teal-400 bg-white"
-          >
+          <select value={pageSize} onChange={e => onPageSizeChange(Number(e.target.value))}
+            className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-teal-400 bg-white">
             {pageSizeOptions.map(s => <option key={s} value={s}>{s} / page</option>)}
           </select>
         )}
       </div>
       <div className="flex items-center gap-1">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1}
-          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-600"
-        >
+        <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage <= 1}
+          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-600">
           ‹ Prev
         </button>
         {getPages().map((p, i) =>
           p === "..." ? (
             <span key={`dot-${i}`} className="px-2 text-slate-400 text-sm">…</span>
           ) : (
-            <button
-              key={p}
-              onClick={() => onPageChange(p)}
-              className={`min-w-[34px] h-[34px] text-sm font-medium rounded-lg transition-all ${
-                p === currentPage
-                  ? "text-white shadow-sm"
-                  : "text-slate-600 hover:bg-gray-50 border border-gray-200"
-              }`}
-              style={p === currentPage ? { background: "#0E6C68" } : {}}
-            >
+            <button key={p} onClick={() => onPageChange(p)}
+              className={`min-w-[34px] h-[34px] text-sm font-medium rounded-lg transition-all ${p === currentPage ? "text-white shadow-sm" : "text-slate-600 hover:bg-gray-50 border border-gray-200"}`}
+              style={p === currentPage ? { background: "#0E6C68" } : {}}>
               {p}
             </button>
           )
         )}
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-600"
-        >
+        <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage >= totalPages}
+          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-600">
           Next ›
         </button>
       </div>
@@ -292,31 +261,133 @@ export const RightDrawer = ({ title, children, onClose, open = false }) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 animate-fade-in-backdrop bg-black/40" 
-        onClick={onClose}
-        style={{ backdropFilter: "blur(4px)" }}
-      />
-      {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-xl bg-white animate-slide-in-from-right shadow-2xl overflow-hidden flex flex-col">
-        {/* Header - if title is provided */}
+      <div className="fixed inset-0 animate-fade-in-backdrop bg-black/40" onClick={onClose} style={{ backdropFilter: "blur(4px)" }} />
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-white animate-slide-in-from-right shadow-2xl overflow-hidden flex flex-col">
         {title && (
           <div className="px-8 py-6 bg-gradient-to-r from-teal-50 to-blue-50 border-b border-teal-100 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-            </div>
-            <button 
-              onClick={onClose} 
-              className="p-2 hover:bg-white/50 rounded-lg transition-colors text-gray-600 hover:text-gray-900"
-            >
+            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+            <button onClick={onClose} className="p-2 hover:bg-white/50 rounded-lg transition-colors text-gray-600 hover:text-gray-900">
               <Icons.X />
             </button>
           </div>
         )}
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {children}
+        <div className="flex-1 overflow-y-auto">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+// ── ICDSelect ──────────────────────────────────────────────────
+export const ICDSelect = ({ label, value, options = [], onChange }) => {
+  const [open, setOpen]     = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const regularOptions = options.filter(o => o.value !== "__other__");
+  const hasOther       = options.some(o => o.value === "__other__");
+  const filtered       = regularOptions.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
+  const selectedLabel  = regularOptions.find(o => o.value === value)?.label;
+
+  const handleSelect = (val) => { onChange(val); setOpen(false); setSearch(""); };
+  const handleOther  = ()    => { onChange("__other__"); setOpen(false); setSearch(""); };
+
+  return (
+    <div ref={ref} className="relative">
+      {label && <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>}
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:border-teal-400 transition-all flex items-center justify-between">
+        <span className={selectedLabel ? "text-slate-800" : "text-slate-400"}>{selectedLabel || "Select..."}</span>
+        <svg className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search ICD code..."
+              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-teal-400" />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0
+              ? <p className="text-xs text-slate-400 text-center py-4">No matching codes</p>
+              : filtered.map(o => (
+                  <button key={o.value} type="button" onClick={() => handleSelect(o.value)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-teal-50 hover:text-teal-700 ${o.value === value ? "bg-teal-50 text-teal-700 font-medium" : "text-slate-700"}`}>
+                    {o.label}
+                  </button>
+                ))
+            }
+          </div>
+          {hasOther && (
+            <div className="border-t border-gray-100">
+              <button type="button" onClick={handleOther}
+                className="w-full text-left px-4 py-2.5 text-sm text-teal-600 font-medium hover:bg-teal-50 transition-colors flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Other (Add new ICD code)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── ICDOtherPopup ──────────────────────────────────────────────
+export const ICDOtherPopup = ({ onClose, onAdded, apiBase }) => {
+  const [code,   setCode]   = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
+
+  const handleAdd = async () => {
+    if (!code.trim()) { setError("ICD code is required"); return; }
+    setSaving(true);
+    setError("");
+    try {
+      const res  = await fetch(`${apiBase}/icd_codes_create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ icd_code: code.trim(), created_by: "admin" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.detail || JSON.stringify(data));
+      onAdded({ icd_code: data.data.icd_code });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <p className="text-base font-semibold text-slate-800">Add New ICD Code</p>
+            <p className="text-xs text-gray-400 mt-0.5">This will be saved and available for future use</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><Icons.X /></button>
+        </div>
+        <div className="space-y-3">
+          <Input label="ICD Code" value={code}
+            onChange={v => { setCode(v.toUpperCase()); setError(""); }} placeholder="e.g. A01.0" />
+          {error && <p className="text-red-500 text-xs bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
+        </div>
+        <div className="flex gap-3 mt-5">
+          <Btn variant="secondary" onClick={onClose} className="flex-1">Cancel</Btn>
+          <Btn onClick={handleAdd} disabled={saving} className="flex-1">
+            {saving ? "Adding..." : <><Icons.Plus /> Add ICD Code</>}
+          </Btn>
         </div>
       </div>
     </div>
