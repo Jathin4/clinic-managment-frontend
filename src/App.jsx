@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { useApp } from "./context/AppContext";
-import Sidebar from "./components/Sidebar";
+import Sidebar, { getVisibleSections } from "./components/Sidebar";
 import TopNav  from "./components/TopNav";
 
 // Pages
@@ -38,7 +39,20 @@ const PAGE_MAP = {
 };
 
 function App() {
-  const { page, authPage, isLoggedIn, setIsLoggedIn, setUser, setAuthPage } = useApp();
+  const { page, setPage, authPage, isLoggedIn, setIsLoggedIn, setUser, setAuthPage, user } = useApp();
+
+  // ── Role guard: redirect to dashboard if current page is not
+  //   accessible for the logged-in user's role ─────────────────
+  useEffect(() => {
+    if (!isLoggedIn || !user) return;
+    const allowedIds = new Set([
+      "my-profile",
+      ...getVisibleSections(user.role).flatMap(s => s.items.map(i => i.id)),
+    ]);
+    if (!allowedIds.has(page)) {
+      setPage("dashboard");
+    }
+  }, [isLoggedIn, user, page, setPage]);
 
   // ── Auth flow ──────────────────────────────────────────────
   if (!isLoggedIn) {
