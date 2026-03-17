@@ -20,7 +20,7 @@ const DashboardPage = () => {
       <PageHeader title="Dashboard" subtitle={`Welcome back, ${user?.full_name || 'Doctor'}  •  ${today}`} actions={
         <Btn onClick={() => setPage("appointments")}><Icons.Plus />New Appointment</Btn>
       }/>
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
         <StatCard title="Total Patients"    value="1,842" change="+12%"  icon={Icons.Patient}      bgColor="#DBEAFE" />
         <StatCard title="Today's Apts"      value="24"    change="+3"    icon={Icons.Calendar}    bgColor="#FFEDD5" />
         {/* <StatCard title="Active Rx"         value="312"   change="+8%"   icon={Icons.Prescription} bgColor="#FEF3C7" /> */}

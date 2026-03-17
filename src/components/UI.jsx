@@ -80,7 +80,7 @@ export const Input = ({ label, type = "text", value, onChange, placeholder, requ
   <div>
     <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
     <input
-      type={type} value={value} onChange={e => onChange(e.target.value)}
+      type={type} value={value ?? ""} onChange={e => onChange(e.target.value)}
       placeholder={placeholder} required={required} min={min}
       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-50 transition-all"
     />

@@ -123,7 +123,7 @@ export const DOCTOR_APPOINTMENTS = [
   { doctor:"Dr. Anita Nair",   appointments:35, completed:31 },
   { doctor:"Dr. Suresh Menon", appointments:41, completed:38 },
 ];
-export const PAYMENT_MODES  = [{ name:"Cash", value:42, color:"#0E6C68" }, { name:"Card", value:31, color:"#14A3A0" }, { name:"UPI", value:27, color:"#4ECDC4" }];
+export const PAYMENT_MODES  = [{ name:"Cash", value:42, color:"#6366F1" }, { name:"Card", value:31, color:"#F59E0B" }, { name:"UPI", value:27, color:"#EC4899" }];
 export const PATIENT_GROWTH = [{ month:"Sep", patients:280 },{ month:"Oct", patients:310 },{ month:"Nov", patients:295 },{ month:"Dec", patients:340 },{ month:"Jan", patients:380 },{ month:"Feb", patients:420 },{ month:"Mar", patients:95 }];
 
 // Current logged-in user
@@ -131,7 +131,7 @@ export const CURRENT_USER = {
   id: "EMP-001",
   name: "Dr. Rajesh Agarwal",
   initials: "RA",
-  role: "Super Admin",
+  role: "Doctor",
   designation: "Chief Medical Officer",
   department: "Administration",
   specialization: "Internal Medicine",
