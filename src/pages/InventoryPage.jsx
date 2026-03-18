@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import Icons from '../components/Icons';
 import { RightDrawer, Btn, Input, Select, Toast, PageHeader, DataTable, TR, TD } from '../components/UI';
+import { useApp } from '../context/AppContext';
  
 const InventoryPage = () => {
+  const { showLoading, hideLoading } = useApp();
   const [inventory, setInventory] = useState([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -17,6 +19,7 @@ const InventoryPage = () => {
   const blank = { category_name: "", transaction_type: "", batch_no: "", expiry_date: "", quantity: "", purchase_price: "", sale_price: "", remarks: "", transaction_date: "" };
   const [form, setForm] = useState(blank);
  
+  const Required = () => <span className="text-red-500">*</span>;
   const showToast = (msg, type = "success") => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3000); };
   const setField = (key, val) => { setForm(p => ({ ...p, [key]: val })); setErrors(p => ({ ...p, [key]: undefined })); };
  
@@ -38,12 +41,13 @@ const InventoryPage = () => {
   const fetchInventory = async () => {
     try {
       setIsLoading(true);
+      showLoading("Loading inventory...", "inventory");
       const res = await fetch(`${baseUrl}/inventory_transactions_read?clinic_id=1`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setInventory(Array.isArray(data) ? data : []);
     } catch { showToast("Failed to load inventory", "error"); }
-    finally { setIsLoading(false); }
+    finally { setIsLoading(false); hideLoading(); }
   };
  
   const handleEdit = item => {
@@ -181,14 +185,14 @@ const InventoryPage = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2"><Input label="Category Name *" value={form.category_name} onChange={v => setField("category_name", v)} placeholder="e.g. Syrup, Tablet" /><Err f="category_name" /></div>
-                <div><Select label="Transaction Type *" value={form.transaction_type} onChange={v => setField("transaction_type", v)} options={["IN", "OUT", "ADJUST"]} /><Err f="transaction_type" /></div>
-                <div><Input label="Batch No." value={form.batch_no} onChange={v => setField("batch_no", v)} placeholder="e.g. B2025-01" /></div>
-                <div><Input label="Quantity *" type="number" value={form.quantity} onChange={v => setField("quantity", v)} placeholder="0" /><Err f="quantity" /></div>
+                <div className="col-span-2"><Input label= {<>Category Name <Required /></>} value={form.category_name} onChange={v => setField("category_name", v)} placeholder="e.g. Syrup, Tablet" /><Err f="category_name" /></div>
+                <div><Select label= {<>Transaction Type <Required /></>} value={form.transaction_type} onChange={v => setField("transaction_type", v)} options={["IN", "OUT", "ADJUST"]} /><Err f="transaction_type" /></div>
+                <div><Input label= {<>Batch No. <Required /></>} value={form.batch_no} onChange={v => setField("batch_no", v)} placeholder="e.g. B2025-01" /><Err f="batch_no" /></div>
+                <div><Input label= {<>Quantity <Required /></>} type="number" value={form.quantity} onChange={v => setField("quantity", v)} placeholder="0" /><Err f="quantity" /></div>
                 <div><Input label="Expiry Date" type="date" value={form.expiry_date} onChange={v => setField("expiry_date", v)} /></div>
-                <div><Input label="Purchase Price *" type="number" value={form.purchase_price} onChange={v => setField("purchase_price", v)} placeholder="0.00" /><Err f="purchase_price" /></div>
-                <div><Input label="Sale Price *" type="number" value={form.sale_price} onChange={v => setField("sale_price", v)} placeholder="0.00" /><Err f="sale_price" /></div>
-                <div className="col-span-2"><Input label="Transaction Date *" type="date" value={form.transaction_date} onChange={v => setField("transaction_date", v)} /><Err f="transaction_date" /></div>
+                <div><Input label= {<>Purchase Price <Required /></>} type="number" value={form.purchase_price} onChange={v => setField("purchase_price", v)} placeholder="0.00" /><Err f="purchase_price" /></div>
+                <div><Input label= {<>Sale Price <Required /></>} type="number" value={form.sale_price} onChange={v => setField("sale_price", v)} placeholder="0.00" /><Err f="sale_price" /></div>
+                <div className="col-span-2"><Input label= {<>Transaction Date <Required /></>} type="date" value={form.transaction_date} onChange={v => setField("transaction_date", v)} /><Err f="transaction_date" /></div>
                 <div className="col-span-2"><Input label="Remarks" value={form.remarks} onChange={v => setField("remarks", v)} placeholder="Optional notes" /></div>
               </div>
             </div>
@@ -206,4 +210,5 @@ const InventoryPage = () => {
 };
  
 export default InventoryPage;
+ 
  

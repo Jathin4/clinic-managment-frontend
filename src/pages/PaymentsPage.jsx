@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   MOCK_CLINICS, MOCK_USERS, MOCK_PATIENTS, MOCK_APPOINTMENTS,
@@ -12,11 +12,18 @@ import { Badge, StatCard, Modal, Btn, Input, Select, Toast, PageHeader, DataTabl
 import { LineChart, BarChart, DonutChart, AreaChart } from '../components/Charts';
 
 const PaymentsPage = () => {
+  const { showLoading, hideLoading } = useApp();
   const [pays, setPays] = useState(MOCK_PAYMENTS);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const blank = { bill_id:"", payment_mode:"Cash", transaction_reference:"", amount_paid:"" };
   const [form, setForm] = useState(blank);
+
+  useEffect(() => {
+    showLoading("Loading payments...", "payments");
+    const timer = setTimeout(() => hideLoading(), 500);
+    return () => clearTimeout(timer);
+  }, []);
   const f = v => pays.filter(p => {
     const bill=MOCK_BILLS.find(b=>b.id===p.bill_id);
     const pat=bill?MOCK_PATIENTS.find(pt=>pt.id===bill.patient_id):null;

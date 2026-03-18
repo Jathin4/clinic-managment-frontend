@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Icons from '../components/Icons';
 import { Btn, Input, Toast, PageHeader, DataTable, TR, TD, Modal } from '../components/UI';
 import EncounterWorkflow from '../components/EncounterWorkflow';
+import { useApp } from '../context/AppContext';
  
 const ITEMS_PER_PAGE = 10;
 const API = 'http://127.0.0.1:5020';
@@ -11,7 +12,7 @@ const getDeleted = () => JSON.parse(localStorage.getItem(LS_KEY) || '[]');
 const addDeleted = id => localStorage.setItem(LS_KEY, JSON.stringify([...getDeleted(), id]));
  
 const EncountersPage = () => {
- 
+  const { showLoading, hideLoading } = useApp();
   const [encounters, setEncounters] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
@@ -45,13 +46,14 @@ const EncountersPage = () => {
   const fetchEncounters = async () => {
     try {
       setIsLoading(true);
+      showLoading("Loading encounters...", "encounters");
       const res = await fetch(`${API}/encountersread?clinic_id=1`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       const deleted = getDeleted();
       setEncounters(Array.isArray(data) ? data.filter(e => !deleted.includes(e.id)) : []);
     } catch { showToast("Failed to load encounters"); }
-    finally { setIsLoading(false); }
+    finally { setIsLoading(false); hideLoading(); }
   };
  
   const fetchPatients = async () => {

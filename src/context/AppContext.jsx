@@ -21,6 +21,17 @@ export const AppProvider = ({ children }) => {
   const [user, setUser]         = useState(null);
   const [collapsed, setCollapsed]   = useState(false);
   const [mobileSidebar, setMobileSidebar] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Loading...");
+  const [loadingType, setLoadingType] = useState("default");
+
+  const showLoading = (message = "Loading...", type = "default") => {
+    setLoadingMessage(message);
+    setLoadingType(type);
+    setIsLoading(true);
+  };
+
+  const hideLoading = () => setIsLoading(false);
 
   const handleLogout = () => {
     setIsLoggedIn(false);
@@ -33,7 +44,7 @@ export const AppProvider = ({ children }) => {
   };
 
   return (
-    <AppContext.Provider value={{ page: pageState, setPage, authPage, setAuthPage, isLoggedIn, setIsLoggedIn, user, setUser, collapsed, setCollapsed, mobileSidebar, setMobileSidebar, handleLogout }}>
+    <AppContext.Provider value={{ page: pageState, setPage, authPage, setAuthPage, isLoggedIn, setIsLoggedIn, user, setUser, collapsed, setCollapsed, mobileSidebar, setMobileSidebar, handleLogout, isLoading, setIsLoading, loadingMessage, loadingType, showLoading, hideLoading }}>
       {children}
     </AppContext.Provider>
   );

@@ -6,6 +6,7 @@ import { Badge, RightDrawer, Btn, Input, Select, Toast, PageHeader, DataTable, T
 
 const UsersPage = () => {
 
+  const { showLoading, hideLoading } = useApp();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -98,6 +99,11 @@ const UsersPage = () => {
       newErrors.qualifications = "At least one qualification is required for Doctor role";
     }
 
+    // For Doctor role, specialization is required
+    if (form.role === "Doctor" && (!form.specialization || form.specialization.trim() === "")) {
+      newErrors.specialization = "Specialization is required for Doctor role";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -125,6 +131,7 @@ const UsersPage = () => {
     try {
 
       setIsLoading(true);
+      showLoading("Loading users...", "users");
 
       const clinicId = 1;
 
@@ -153,6 +160,7 @@ const UsersPage = () => {
     } finally {
 
       setIsLoading(false);
+      hideLoading();
 
     }
   };
@@ -506,18 +514,9 @@ const UsersPage = () => {
                     <TR key={u.id}>
 
                       <TD>
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                            style={{background:"linear-gradient(135deg,#0E6C68,#14A3A0)"}}
-                          >
-                            {u.full_name.split(" ").map(n=>n[0]).join("").slice(0,2)}
-                          </div>
-
-                          <span className="font-semibold text-slate-700">
-                            {u.full_name}
-                          </span>
-                        </div>
+                        <span className="font-semibold text-slate-700">
+                          {u.full_name}
+                        </span>
                       </TD>
 
                       <TD>{u.email}</TD>
@@ -718,6 +717,8 @@ const UsersPage = () => {
                       options={[
                         { label: "Admin", value: "Admin" },
                         { label: "Doctor", value: "Doctor" },
+                        {label: "Pharmacist", value: "Pharmacist"},
+                        {label: "Diagnostic Staff", value: "Diagnostic Staff"},
                         { label: "Receptionist", value: "Receptionist" }
                       ]}
                     />
@@ -746,9 +747,13 @@ const UsersPage = () => {
                     <Input
                       label="Specialization"
                       value={form.specialization}
-                      onChange={(v) => setForm({ ...form, specialization: v })}
+                      onChange={(v) => {
+                        setForm({ ...form, specialization: v });
+                        if (errors.specialization) setErrors({ ...errors, specialization: "" });
+                      }}
                       placeholder="e.g. Cardiology, General Practice"
                     />
+                    {errors.specialization && <p className="text-red-500 text-xs mt-1">{errors.specialization}</p>}
                   </div>
                 </div>
               )}

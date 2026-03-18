@@ -5,6 +5,7 @@ import { Badge, StatCard, RightDrawer, Btn, Input, Select, Toast, PageHeader, Da
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const ClinicsPage = () => {
+  const { showLoading, hideLoading } = useApp();
   const [clinics, setClinics] = useState([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -26,7 +27,7 @@ const ClinicsPage = () => {
   const validateStep0 = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Required";          // ✅ fixed: clinic_name → name
-    if (!form.gst_number.trim()) e.gst_number = "None"; // GST can be optional, so message changed to "None"
+     // GST can be optional, so message changed to "None"
     if (!form.address.trim()) e.address = "Required";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -56,6 +57,7 @@ const ClinicsPage = () => {
   const fetchClinics = async () => {
     try {
       setIsLoading(true);
+      showLoading("Loading clinics...", "clinics");
       const response = await fetch(`${API_BASE_URL}/clinicsread`);
       if (!response.ok) throw new Error('Failed to fetch clinics');
       const data = await response.json();
@@ -65,6 +67,7 @@ const ClinicsPage = () => {
       showToast('Failed to load clinics', 'error');
     } finally {
       setIsLoading(false);
+      hideLoading();
     }
   };
   

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Icons from '../components/Icons';
 import { Badge, RightDrawer, Btn, Toast, PageHeader, DataTable, TR, TD, Modal } from '../components/UI';
+import { useApp } from '../context/AppContext';
  
 const ITEMS_PER_PAGE = 10;
 const API = process.env.REACT_APP_API_BASE_URL;
@@ -19,6 +20,7 @@ const Field = ({ label, error, children }) => (
 );
  
 const BillingPage = () => {
+  const { showLoading, hideLoading } = useApp();
   const [bills, setBills] = useState([]);
   const [patients, setPatients] = useState([]);
   const [allEncounters, setAllEncounters] = useState([]);
@@ -32,10 +34,11 @@ const BillingPage = () => {
   const [errors, setErrors] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
  
   const blank = { patient_id: "", encounter_id: "", chief_complaint: "", invoice_number: "", status: "Unpaid", subtotal: "", gst_amount: "", discount: "", total_amount: "" };
   const [form, setForm] = useState(blank);
- 
+  const Required = () => <span className="text-red-500">*</span>;
   const showToast = (msg, type = "success") => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3000); };
   const setField = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(p => ({ ...p, [k]: undefined })); };
   const closeDrawer = () => { setShowDrawer(false); setEditingBill(null); setForm(blank); setErrors({}); };
@@ -43,20 +46,29 @@ const BillingPage = () => {
   const validate = () => {
     const e = {};
     if (!form.patient_id) e.patient_id = "Required";
-    if (!form.invoice_number) e.invoice_number = "Required";
     if (!form.subtotal) e.subtotal = "Required";
     setErrors(e);
     return !Object.keys(e).length;
   };
  
+  const fetchNextInvoiceNumber = async () => {
+    try {
+      setInvoiceLoading(true);
+      const data = await fetch(`${API}/bills_next_invoice?clinic_id=1`).then(r => r.json());
+      setForm(p => ({ ...p, invoice_number: data.invoice_number || "" }));
+    } catch { showToast("Could not generate invoice number", "error"); }
+    finally { setInvoiceLoading(false); }
+  };
+ 
   const fetchBills = async () => {
     try {
       setIsLoading(true);
+      showLoading("Loading bills...", "billing");
       const data = await fetch(`${API}/billsread?clinic_id=1`).then(r => r.json());
       const deleted = getDeleted();
       setBills(Array.isArray(data) ? data.filter(b => !deleted.includes(b.id)) : []);
     } catch { showToast("Failed to load bills", "error"); }
-    finally { setIsLoading(false); }
+    finally { setIsLoading(false); hideLoading(); }
   };
  
   const fetchPatients = async () => {
@@ -78,7 +90,8 @@ const BillingPage = () => {
  
   const patientEncounters = allEncounters.filter(e => String(e.patient_id) === String(form.patient_id));
   const patientName = id => patients.find(p => String(p.value) === String(id))?.label || "—";
-  const getComplaint = b => b.chief_complaint || allEncounters.find(e => String(e.id) === String(b.encounter_id))?.chief_complaint || "—";
+ 
+  const getComplaint = b => b._chief_complaint ?? allEncounters.find(e => String(e.id) === String(b.encounter_id))?.chief_complaint ?? "—";
   const getDate = b => { const d = b.created_at || b.created_date; return d ? String(d).split("T")[0] : "—"; };
  
   const handlePatientChange = pid => {
@@ -88,12 +101,25 @@ const BillingPage = () => {
  
   const handleEncounterChange = encId => {
     const enc = allEncounters.find(e => String(e.id) === String(encId));
-    setForm(p => ({ ...p, encounter_id: encId, chief_complaint: enc?.chief_complaint ?? "" }));
+    setForm(p => ({ ...p, encounter_id: encId, chief_complaint: enc?.chief_complaint || "" }));
+  };
+ 
+  const handleNewInvoice = async () => {
+    setEditingBill(null); setForm(blank); setErrors({});
+    setShowDrawer(true);
+    await fetchNextInvoiceNumber();
   };
  
   const handleEdit = bill => {
     setEditingBill(bill);
-    setForm({ patient_id: bill.patient_id ?? "", encounter_id: bill.encounter_id ?? "", chief_complaint: getComplaint(bill) === "—" ? "" : getComplaint(bill), invoice_number: bill.invoice_number ?? "", status: bill.status ?? "Unpaid", subtotal: bill.subtotal ?? "", gst_amount: bill.gst_amount ?? "", discount: bill.discount ?? "", total_amount: bill.total_amount ?? "" });
+    const enc = allEncounters.find(e => String(e.id) === String(bill.encounter_id));
+    setForm({
+      patient_id: bill.patient_id ?? "", encounter_id: bill.encounter_id ?? "",
+      chief_complaint: bill._chief_complaint ?? enc?.chief_complaint ?? "",
+      invoice_number: bill.invoice_number ?? "", status: bill.status ?? "Unpaid",
+      subtotal: bill.subtotal ?? "", gst_amount: bill.gst_amount ?? "",
+      discount: bill.discount ?? "", total_amount: bill.total_amount ?? ""
+    });
     setShowDrawer(true);
   };
  
@@ -102,12 +128,29 @@ const BillingPage = () => {
     try {
       const res = await fetch(`${API}/bills_create_update/`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editingBill?.id ?? null, clinic_id: 1, created_by: "admin", patient_id: Number(form.patient_id), encounter_id: form.encounter_id ? Number(form.encounter_id) : null, chief_complaint: form.chief_complaint || null, invoice_number: form.invoice_number, status: form.status, subtotal: Number(form.subtotal), gst_amount: Number(form.gst_amount || 0), discount: Number(form.discount || 0), total_amount: Number(form.total_amount || 0) })
+        body: JSON.stringify({
+          id: editingBill?.id ?? null, clinic_id: 1, created_by: "admin",
+          patient_id: Number(form.patient_id),
+          encounter_id: form.encounter_id ? Number(form.encounter_id) : null,
+          chief_complaint: form.chief_complaint || null,
+          invoice_number: form.invoice_number || null,
+          status: form.status, subtotal: Number(form.subtotal),
+          gst_amount: Number(form.gst_amount || 0), discount: Number(form.discount || 0),
+          total_amount: Number(form.total_amount || 0)
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+ 
+      if (editingBill?.id) {
+        setBills(prev => prev.map(b =>
+          b.id === editingBill.id ? { ...b, _chief_complaint: form.chief_complaint } : b
+        ));
+      }
+ 
       showToast(editingBill ? "Bill updated" : "Bill created");
-      closeDrawer(); fetchBills();
+      closeDrawer();
+      fetchBills();
     } catch (e) { showToast(e.message || "Operation failed", "error"); }
   };
  
@@ -129,7 +172,7 @@ const BillingPage = () => {
   return (
     <div>
       <PageHeader title="Bills & Invoices" subtitle="Manage billing records" actions={
-        <Btn onClick={() => { setEditingBill(null); setForm(blank); setErrors({}); setShowDrawer(true); }}><Icons.Plus /> New Invoice</Btn>
+        <Btn onClick={handleNewInvoice}><Icons.Plus /> New Invoice</Btn>
       } />
  
       {isLoading ? <div className="text-center py-6 text-gray-500">Loading bills...</div> : (
@@ -196,9 +239,7 @@ const BillingPage = () => {
           <p className="text-sm text-slate-600 mb-6">Are you sure you want to delete this bill? This action cannot be undone.</p>
           <div className="flex justify-end gap-3">
             <Btn variant="secondary" onClick={() => setDeleteConfirm(null)}>Cancel</Btn>
-            <Btn onClick={() => handleDelete(deleteConfirm)} style={{ background: "#ef4444" }}>
-              <Icons.Trash /> Delete
-            </Btn>
+            <Btn onClick={() => handleDelete(deleteConfirm)} style={{ background: "#ef4444" }}><Icons.Trash /> Delete</Btn>
           </div>
         </Modal>
       )}
@@ -206,7 +247,13 @@ const BillingPage = () => {
       <RightDrawer title={editingBill ? "Edit Invoice" : "New Invoice"} open={showDrawer} onClose={closeDrawer}>
         <div className="h-full flex flex-col">
           <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
-            <Field label="Patient *" error={errors.patient_id}>
+            <Field label="Invoice Number">
+              <div className="relative">
+                <input value={invoiceLoading ? "Generating…" : form.invoice_number} readOnly className={`${sel} bg-gray-50 text-slate-500 cursor-not-allowed font-mono`} />
+                {invoiceLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-teal-500 animate-pulse">●</span>}
+              </div>
+            </Field>
+            <Field label={<>Patient <Required /></>} error={errors.patient_id}>
               <select value={form.patient_id} onChange={e => handlePatientChange(e.target.value)} className={`${sel} ${errors.patient_id ? "border-red-400" : ""}`}>
                 <option value="">Select patient…</option>
                 {patients.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
@@ -219,18 +266,15 @@ const BillingPage = () => {
               </select>
             </Field>
             <Field label="Chief Complaint">
-              <input value={form.chief_complaint} onChange={e => setField("chief_complaint", e.target.value)} placeholder="Auto-filled from encounter or enter manually" className={sel} />
+              <input value={form.chief_complaint || "—"} readOnly className={`${sel} bg-gray-50 text-slate-500 cursor-not-allowed`} />
             </Field>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Invoice Number *" error={errors.invoice_number}>
-                <input type="number" min="0" value={form.invoice_number} onChange={e => setField("invoice_number", e.target.value)} className={`${sel} ${errors.invoice_number ? "border-red-400" : ""}`} />
-              </Field>
               <Field label="Status">
                 <select value={form.status} onChange={e => setField("status", e.target.value)} className={sel}>
                   {["Unpaid", "Paid", "Partial"].map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
-              <Field label="Subtotal (₹) *" error={errors.subtotal}>
+              <Field label={<>Sub Total <Required /></>} error={errors.subtotal}>
                 <input type="number" min="0" value={form.subtotal} onChange={e => setField("subtotal", e.target.value)} className={`${sel} ${errors.subtotal ? "border-red-400" : ""}`} />
               </Field>
               <Field label="GST Amount (₹)">
