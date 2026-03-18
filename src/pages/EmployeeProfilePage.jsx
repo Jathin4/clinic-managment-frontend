@@ -1,178 +1,285 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { CURRENT_USER } from '../data/mockData';
 import Icons from '../components/Icons';
-import { Badge, Btn, Input, Toast, PageHeader } from '../components/UI';
-
-const EmployeeProfilePage = () => {
-  const { setPage } = useApp();
-  const u = CURRENT_USER;
-  const [editMode, setEditMode] = useState(false);
-  const [phone, setPhone] = useState(u.phone);
-  const [address, setAddress] = useState(u.address);
-  const [toast, setToast] = useState(null);
-
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
-
+import { Toast, Btn } from '../components/UI';
+ 
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
+ 
+const Field = ({ label, value, editMode, type = "text", onChange, options }) => (
+  <div className="border-b border-gray-50 pb-4">
+    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">{label}</div>
+    {editMode ? (
+      options ? (
+        <select value={value} onChange={e => onChange(e.target.value)}
+          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal-400 bg-white">
+          {options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      ) : (
+        <input type={type} value={value} onChange={e => onChange(e.target.value)}
+          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal-400" />
+      )
+    ) : (
+      <div className="text-sm font-medium text-slate-700">{value || "—"}</div>
+    )}
+  </div>
+);
+ 
+const BLANK_QUAL = { qualification_name: "", institute_name: "", year: "" };
+ 
+const EmployeeProfilePage = ({ user }) => {
+  const { setPage, showLoading, hideLoading } = useApp();
+  const [profile,    setProfile]    = useState(null);
+  const [stats,      setStats]      = useState(null); // null = still loading
+  const [isLoading,  setIsLoading]  = useState(true);
+  const [editMode,   setEditMode]   = useState(false);
+  const [isSaving,   setIsSaving]   = useState(false);
+  const [toast,      setToast]      = useState(null);
+  const [form,       setForm]       = useState({ phone: "", specialization: "", blood_group: "", date_of_birth: "", join_date: "", qualifications: [] });
+  const [newQual,    setNewQual]    = useState(BLANK_QUAL);
+ 
+  const showToast = (msg, type = "error") => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3000); };
+  const setField  = (key, val) => setForm(f => ({ ...f, [key]: val }));
+ 
+  // ── Step 1: Load profile first (fast) ──
+  useEffect(() => {
+    if (!user?.id || !user?.clinic_id) return;
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        showLoading("Loading profile...", "my-profile");
+        const res  = await fetch(`${API_BASE}/get_user_profile?user_id=${user.id}&clinic_id=${user.clinic_id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load profile");
+        setProfile(data);
+        setForm({
+          phone:          data.phone          || "",
+          specialization: data.specialization || "",
+          blood_group:    data.blood_group    || "",
+          date_of_birth:  data.date_of_birth  || "",
+          join_date:      data.join_date       || "",
+          qualifications: data.qualifications  || [],
+        });
+      } catch (e) {
+        showToast(e.message);
+      } finally {
+        setIsLoading(false);
+        hideLoading();
+      }
+    };
+    fetchProfile();
+  }, [user]);
+ 
+  // ── Step 2: Load stats lazily after profile renders ──
+  useEffect(() => {
+    if (!user?.clinic_id) return;
+    const fetchStats = async () => {
+      try {
+        const [patientsRes, aptsRes, encRes] = await Promise.all([
+          fetch(`${API_BASE}/patient_read?clinic_id=${user.clinic_id}`),
+          fetch(`${API_BASE}/appointmentsread?clinic_id=${user.clinic_id}`),
+          fetch(`${API_BASE}/encountersread?clinic_id=${user.clinic_id}`),
+        ]);
+        const [patientsData, aptsData, encData] = await Promise.all([
+          patientsRes.json(), aptsRes.json(), encRes.json()
+        ]);
+        const now = new Date();
+        const aptsThisMonth = Array.isArray(aptsData)
+          ? aptsData.filter(a => {
+              const d = new Date(a.appointment_date);
+              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).length
+          : 0;
+        setStats({
+          patients:     Array.isArray(patientsData) ? patientsData.length : 0,
+          appointments: aptsThisMonth,
+          encounters:   Array.isArray(encData) ? encData.length : 0,
+        });
+      } catch {
+        setStats({ patients: "—", appointments: "—", encounters: "—" });
+      }
+    };
+    fetchStats();
+  }, [user?.clinic_id]);
+ 
+  const addQualification = () => {
+    if (!newQual.qualification_name || !newQual.institute_name) return showToast("Fill in qualification name and institute", "warning");
+    setField("qualifications", [...form.qualifications, { ...newQual, id: Date.now() }]);
+    setNewQual(BLANK_QUAL);
+  };
+ 
+  const removeQualification = (id) => setField("qualifications", form.qualifications.filter(q => q.id !== id));
+ 
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      const res = await fetch(`${API_BASE}/users_create_update/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: profile.user_id, clinic_id: profile.clinic_id,
+          full_name: profile.full_name, email: profile.email,
+          role: profile.role, is_active: profile.is_active, user: "admin",
+          ...form,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update profile");
+      setProfile(p => ({ ...p, ...form }));
+      setEditMode(false);
+      showToast("Profile updated successfully", "success");
+    } catch (e) {
+      showToast(e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+ 
+  const handleCancel = () => {
+    setForm({ phone: profile.phone || "", specialization: profile.specialization || "", blood_group: profile.blood_group || "", date_of_birth: profile.date_of_birth || "", join_date: profile.join_date || "", qualifications: profile.qualifications || [] });
+    setNewQual(BLANK_QUAL);
+    setEditMode(false);
+  };
+ 
+  if (isLoading) return <div className="text-center py-20 text-slate-400">Loading profile...</div>;
+  if (!profile)  return <div className="text-center py-20 text-slate-400">Profile not found.</div>;
+ 
+  const initials  = profile.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const statCards = [
+    { label: "Total Patients",   value: stats?.patients,     icon: Icons.Patient,  bg: "#DFF7F6" },
+    { label: "Apts This Month",  value: stats?.appointments, icon: Icons.Calendar, bg: "#EDE9FE" },
+    { label: "Total Encounters", value: stats?.encounters,   icon: Icons.Activity, bg: "#FEF3C7" },
+  ];
+ 
   return (
     <div>
       <button onClick={() => setPage("dashboard")} className="flex items-center gap-2 text-sm text-slate-500 hover:text-teal-700 mb-5 transition-colors font-medium">
         <Icons.ChevronLeft /> Back to Dashboard
       </button>
-
+ 
       {/* Hero Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
-        {/* Cover banner */}
-        <div className="h-28 w-full" style={{ background: "linear-gradient(120deg, #0A5955 0%, #0E6C68 50%, #14A3A0 100%)" }}>
-          <div className="h-full w-full opacity-10" style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
-        </div>
+        <div className="h-28 w-full" style={{ background: "linear-gradient(120deg, #0A5955 0%, #0E6C68 50%, #14A3A0 100%)" }} />
         <div className="px-6 pb-6">
           <div className="flex items-end justify-between -mt-10 mb-4">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg" style={{ background: "linear-gradient(135deg, #0E6C68, #14A3A0)" }}>
-              {u.initials}
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg"
+              style={{ background: "linear-gradient(135deg, #0E6C68, #14A3A0)" }}>
+              {initials}
             </div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold">{u.role}</span>
-              <Btn variant="secondary" size="sm" onClick={() => setEditMode(!editMode)}>
-                <Icons.Edit />{editMode ? "Cancel" : "Edit Profile"}
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold">{profile.role}</span>
+              <Btn variant="secondary" size="sm" onClick={() => editMode ? handleCancel() : setEditMode(true)}>
+                <Icons.Edit /> {editMode ? "Cancel" : "Edit Profile"}
               </Btn>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">{u.name}</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{u.designation} · {u.department}</p>
-          <p className="text-slate-400 text-sm mt-0.5">{u.clinic}</p>
+          <h1 className="text-2xl font-bold text-slate-800">{profile.full_name}</h1>
+          {profile.specialization && <p className="text-slate-500 text-sm mt-0.5">{profile.specialization}</p>}
         </div>
       </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        {[
-          { label: "Patients Handled", value: u.stats.patientsHandled, icon: Icons.Patient, bg: "#DFF7F6" },
-          { label: "Apts This Month", value: u.stats.appointmentsThisMonth, icon: Icons.Calendar, bg: "#EDE9FE" },
-          { label: "Avg Patient Rating", value: `★ ${u.stats.avgRating}`, icon: Icons.Activity, bg: "#FEF3C7" },
-          { label: "Years Experience", value: u.stats.yearsExperience, icon: Icons.TrendUp, bg: "#DCFCE7" },
-        ].map(s => (
+ 
+      {/* Stat Cards — show skeleton while stats load */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        {statCards.map(s => (
           <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: s.bg }}>
-              <s.icon />
-            </div>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: s.bg }}><s.icon /></div>
             <div>
-              <div className="text-xl font-bold text-slate-800">{s.value}</div>
+              <div className="text-xl font-bold text-slate-800">
+                {stats === null ? <span className="inline-block w-8 h-5 bg-gray-100 rounded animate-pulse" /> : s.value}
+              </div>
               <div className="text-xs text-slate-400">{s.label}</div>
             </div>
           </div>
         ))}
       </div>
-
+ 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+ 
         {/* Personal Details */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-5">
             <div className="font-bold text-slate-800 text-lg">Personal Information</div>
             {editMode && (
-              <Btn size="sm" onClick={() => { setEditMode(false); showToast("Profile updated successfully"); }}>
-                <Icons.Check /> Save Changes
-              </Btn>
+              <div className="flex gap-2">
+                <Btn variant="secondary" size="sm" onClick={handleCancel} disabled={isSaving}>Cancel</Btn>
+                <Btn size="sm" onClick={handleSave} disabled={isSaving}>
+                  <Icons.Check /> {isSaving ? "Saving..." : "Save Changes"}
+                </Btn>
+              </div>
             )}
           </div>
+ 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8">
-            {[
-              ["Employee ID", u.employeeId],
-              ["Gender", u.gender],
-              ["Date of Birth", u.dob],
-              ["Blood Group", u.bloodGroup],
-              ["Join Date", u.joinDate],
-              ["Specialization", u.specialization],
-            ].map(([label, val]) => (
-              <div key={label} className="border-b border-gray-50 pb-4">
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">{label}</div>
-                <div className="text-sm font-medium text-slate-700">{val}</div>
-              </div>
-            ))}
-
-            <div className="border-b border-gray-50 pb-4">
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Email Address</div>
-              <div className="text-sm font-medium text-slate-700">{u.email}</div>
-            </div>
-
-            <div className="border-b border-gray-50 pb-4">
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Phone Number</div>
-              {editMode
-                ? <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal-400" />
-                : <div className="text-sm font-medium text-slate-700">{phone}</div>}
-            </div>
-
-            <div className="sm:col-span-2 border-b border-gray-50 pb-4">
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Address</div>
-              {editMode
-                ? <textarea value={address} onChange={e => setAddress(e.target.value)} rows={2} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal-400 resize-none" />
-                : <div className="text-sm font-medium text-slate-700">{address}</div>}
-            </div>
+            <Field label="Email Address"  value={profile.email}                              editMode={false} />
+            <Field label="Role"           value={profile.role}                               editMode={false} />
+            <Field label="Status"         value={profile.is_active ? "Active" : "Inactive"}  editMode={false} />
+            <Field label="Date of Birth"  value={form.date_of_birth} type="date" editMode={editMode} onChange={v => setField("date_of_birth", v)} />
+            <Field label="Join Date"      value={form.join_date}     type="date" editMode={editMode} onChange={v => setField("join_date", v)} />
+            <Field label="Phone Number"   value={form.phone}         type="tel"  editMode={editMode} onChange={v => setField("phone", v.replace(/\D/g, "").slice(0, 10))} />
+            <Field label="Specialization" value={form.specialization}            editMode={editMode} onChange={v => setField("specialization", v)} />
+            <Field label="Blood Group"    value={form.blood_group}   options={["O+","O-","A+","A-","B+","B-","AB+","AB-"]} editMode={editMode} onChange={v => setField("blood_group", v)} />
           </div>
-
+ 
           {/* Qualifications */}
-          <div className="mt-5">
+          <div className="mt-6">
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Qualifications</div>
-            <div className="space-y-2">
-              {u.qualifications.map((q, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-teal-50 rounded-xl">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: "#0E6C68" }}>{i + 1}</div>
-                  <span className="text-sm font-medium text-teal-800">{q}</span>
+ 
+            {form.qualifications.length > 0 ? (
+              <div className="space-y-2 mb-4">
+                {form.qualifications.map((q, i) => (
+                  <div key={q.id || q.qualification_id || i} className="flex items-center justify-between p-3 bg-teal-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                        style={{ background: "#0E6C68" }}>{i + 1}</div>
+                      <div>
+                        <p className="text-sm font-medium text-teal-800">{q.qualification_name}</p>
+                        <p className="text-xs text-teal-600">{q.institute_name}{q.year ? ` (${q.year})` : ""}</p>
+                      </div>
+                    </div>
+                    {editMode && (
+                      <button onClick={() => removeQualification(q.id)} className="p-1.5 hover:bg-teal-100 rounded-lg text-teal-400 hover:text-red-500 transition-colors">
+                        <Icons.Trash />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400 mb-4">No qualifications added.</p>
+            )}
+ 
+            {editMode && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Add Qualification</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <input value={newQual.qualification_name} onChange={e => setNewQual(q => ({ ...q, qualification_name: e.target.value }))}
+                    placeholder="Degree (e.g. MBBS)" className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal-400" />
+                  <input value={newQual.institute_name} onChange={e => setNewQual(q => ({ ...q, institute_name: e.target.value }))}
+                    placeholder="Institute name" className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal-400" />
+                  <input value={newQual.year} onChange={e => setNewQual(q => ({ ...q, year: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                    placeholder="Year (e.g. 2002)" className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal-400" />
                 </div>
-              ))}
-            </div>
+                <Btn onClick={addQualification} className="w-full"><Icons.Plus /> Add</Btn>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Right Column */}
-        <div className="space-y-4">
-          {/* Recent Activity */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <div className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Recent Activity
-            </div>
-            <div className="space-y-4">
-              {u.recentActivity.map((a, i) => (
-                <div key={i} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <div className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: "#14A3A0" }}></div>
-                    {i < u.recentActivity.length - 1 && <div className="w-px flex-1 bg-gray-100 mt-1"></div>}
-                  </div>
-                  <div className="pb-3">
-                    <div className="text-xs text-slate-400 mb-0.5">{a.date}</div>
-                    <div className="text-sm text-slate-600">{a.action}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <div className="font-bold text-slate-800 mb-3">Quick Actions</div>
-            <div className="space-y-2">
-              {[
-                ["Change Password", Icons.Settings, () => {}],
-                ["Download ID Card", Icons.Download, () => {}],
-                ["View Audit Log", Icons.Reports, () => {}],
-              ].map(([label, Ic, fn]) => (
-                <button key={label} onClick={fn} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-all">
-                  <Ic />{label}
-                </button>
-              ))}
-            </div>
+ 
+        {/* Quick Actions */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="font-bold text-slate-800 mb-3">Quick Actions</div>
+          <div className="space-y-2">
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-all">
+              <Icons.Settings /> Change Password
+            </button>
           </div>
         </div>
+ 
       </div>
-
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+ 
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
-
-// ============================================================
-// MAIN APP
-
-
+ 
 export default EmployeeProfilePage;
+ 

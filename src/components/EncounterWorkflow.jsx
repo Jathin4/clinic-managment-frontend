@@ -9,6 +9,66 @@ const TABS       = ["encounter", "diagnoses", "prescriptions"];
 const TAB_ICONS  = { encounter: Icons.Encounter, diagnoses: Icons.Diagnosis, prescriptions: Icons.Prescription };
 const FREQUENCIES = ["Once a day(OD)", "Twice a day(BID)", "Three times a day(TID)", "Four times a day(QID)", "As needed(SOS)", "Before sleep(HS)"];
 
+// ── Generic Searchable dropdown ───────────────────────────────────────────────
+const SearchableSelect = ({ label, value, options = [], onChange, placeholder = "Select..." }) => {
+  const [open, setOpen]     = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const close = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const filtered = options.filter(o =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selected = options.find(o => String(o.value) === String(value));
+  const pick = (v) => { onChange(v); setOpen(false); setSearch(""); };
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white flex items-center justify-between focus:outline-none focus:border-teal-400">
+        <span className={selected ? "text-slate-800" : "text-slate-400"}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <svg className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-teal-400" />
+          </div>
+
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0
+              ? <p className="text-xs text-slate-400 text-center py-4">No results</p>
+              : filtered.map(o => (
+                  <button key={o.value} type="button" onClick={() => pick(o.value)}
+                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-teal-50 hover:text-teal-700
+                      ${String(o.value) === String(value) ? "bg-teal-50 text-teal-700 font-medium" : "text-slate-700"}`}>
+                    {o.label}
+                  </button>
+                ))
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Searchable ICD dropdown ───────────────────────────────────────────────────
 const ICDSelect = ({ value, codes = [], onChange }) => {
   const [open, setOpen]     = useState(false);
@@ -87,7 +147,6 @@ const ICDPopup = ({ onClose, onAdded }) => {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to create");
-      // Response: { message, data: { icd_id, icd_code, ... } }
       onAdded(json.data.icd_code);
     } catch (e) {
       setError(e.message);
@@ -133,7 +192,7 @@ const EncounterWorkflow = ({ open, onClose, appointment, onComplete }) => {
 
   const [patients, setPatients] = useState([]);
   const [doctors,  setDoctors]  = useState([]);
-  const [icdCodes, setIcdCodes] = useState([]);  // plain string[]  e.g. ["A00-B99", ...]
+  const [icdCodes, setIcdCodes] = useState([]);
 
   const [selectedPatient, setSelectedPatient] = useState(appointment?.patient_id || "");
   const [selectedDoctor,  setSelectedDoctor]  = useState(appointment?.doctor_id  || "");
@@ -153,7 +212,6 @@ const EncounterWorkflow = ({ open, onClose, appointment, onComplete }) => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Fetch dropdown data whenever drawer opens
   useEffect(() => {
     if (!open) return;
     fetch(`${API_BASE}/patient_read?clinic_id=${CLINIC_ID}`).then(r => r.json()).then(d => setPatients(Array.isArray(d) ? d : [])).catch(console.error);
@@ -161,20 +219,17 @@ const EncounterWorkflow = ({ open, onClose, appointment, onComplete }) => {
     loadIcdCodes();
   }, [open]);
 
-  // GET /icd_codes_read → [{ icd_id, icd_code, ... }]  — store only the code strings
   const loadIcdCodes = () =>
     fetch(`${API_BASE}/icd_codes_read`)
       .then(r => r.json())
       .then(d => setIcdCodes(Array.isArray(d) ? d.map(i => i.icd_code) : []))
       .catch(console.error);
 
-  // ICD selection — "__other__" opens the add popup
   const handleIcdSelect = (val) => {
     if (val === "__other__") { setShowICDPopup(true); return; }
     setDxForm(f => ({ ...f, icd_code: val }));
   };
 
-  // After new code created: reload list from DB, auto-select the new code
   const handleICDAdded = async (newCode) => {
     setShowICDPopup(false);
     await loadIcdCodes();
@@ -256,10 +311,20 @@ const EncounterWorkflow = ({ open, onClose, appointment, onComplete }) => {
             {tab === "encounter" && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-                  <Select label="Patient" value={selectedPatient} onChange={setSelectedPatient}
-                    options={patients.map(p => ({ value: p.id, label: `${p.first_name} ${p.last_name}` }))} />
-                  <Select label="Doctor" value={selectedDoctor} onChange={setSelectedDoctor}
-                    options={doctors.map(d => ({ value: d.id, label: d.name }))} />
+                  <SearchableSelect
+                    label="Patient"
+                    value={selectedPatient}
+                    onChange={setSelectedPatient}
+                    placeholder="Select patient..."
+                    options={patients.map(p => ({ value: p.id, label: `${p.first_name} ${p.last_name}` }))}
+                  />
+                  <SearchableSelect
+                    label="Doctor"
+                    value={selectedDoctor}
+                    onChange={setSelectedDoctor}
+                    placeholder="Select doctor..."
+                    options={doctors.map(d => ({ value: d.id, label: d.name }))}
+                  />
                 </div>
 
                 {[["Chief Complaint", "chief_complaint", 2], ["Clinical Notes", "notes", 4]].map(([lbl, key, rows]) => (
