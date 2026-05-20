@@ -70,36 +70,42 @@ const EmployeeProfilePage = ({ user }) => {
   }, [user]);
  
   // ── Step 2: Load stats lazily after profile renders ──
-  useEffect(() => {
-    if (!user?.clinic_id) return;
-    const fetchStats = async () => {
-      try {
-        const [patientsRes, aptsRes, encRes] = await Promise.all([
-          fetch(`${API_BASE}/patient_read?clinic_id=${user.clinic_id}`),
-          fetch(`${API_BASE}/appointmentsread?clinic_id=${user.clinic_id}`),
-          fetch(`${API_BASE}/encountersread?clinic_id=${user.clinic_id}`),
-        ]);
-        const [patientsData, aptsData, encData] = await Promise.all([
-          patientsRes.json(), aptsRes.json(), encRes.json()
-        ]);
-        const now = new Date();
-        const aptsThisMonth = Array.isArray(aptsData)
-          ? aptsData.filter(a => {
-              const d = new Date(a.appointment_date);
-              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-            }).length
-          : 0;
-        setStats({
-          patients:     Array.isArray(patientsData) ? patientsData.length : 0,
-          appointments: aptsThisMonth,
-          encounters:   Array.isArray(encData) ? encData.length : 0,
-        });
-      } catch {
-        setStats({ patients: "—", appointments: "—", encounters: "—" });
-      }
-    };
-    fetchStats();
-  }, [user?.clinic_id]);
+useEffect(() => {
+  if (!user?.clinic_id) return;
+  const fetchStats = async () => {
+    try {
+      const [aptsRes, encRes] = await Promise.all([
+        fetch(`${API_BASE}/appointmentsread?clinic_id=${user.clinic_id}&doctor_id=${user.id}`),
+        fetch(`${API_BASE}/encountersread?clinic_id=${user.clinic_id}&doctor_id=${user.id}`),
+      ]);
+      const [aptsData, encData] = await Promise.all([
+        aptsRes.json(), encRes.json()
+      ]);
+
+      const now = new Date();
+      const aptsThisMonth = Array.isArray(aptsData)
+        ? aptsData.filter(a => {
+            const d = new Date(a.appointment_date);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          }).length
+        : 0;
+
+      // Unique patients from encounters (since encounters has doctor_id + patient_id)
+      const uniquePatients = Array.isArray(encData)
+        ? new Set(encData.map(e => e.patient_id)).size
+        : 0;
+
+      setStats({
+        patients:     uniquePatients,
+        appointments: aptsThisMonth,
+        encounters:   Array.isArray(encData) ? encData.length : 0,
+      });
+    } catch {
+      setStats({ patients: "—", appointments: "—", encounters: "—" });
+    }
+  };
+  fetchStats();
+}, [user?.clinic_id]);
  
   const addQualification = () => {
     if (!newQual.qualification_name || !newQual.institute_name) return showToast("Fill in qualification name and institute", "warning");
