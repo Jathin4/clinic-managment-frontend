@@ -1,30 +1,30 @@
 import { useState } from 'react';
-
-// ── Calendar helpers ──────────────────────────────────────────────────────────
-
+ 
 const getDaysInMonth     = (year, month) => new Date(year, month + 1, 0).getDate();
 const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
-
+ 
 const MONTH_NAMES = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December"
 ];
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-
-// "09:30:00" or "09:30" → "09:30"
+ 
+// 12-hour format: "15:19:00" → "03:19 PM"
 const fmtTime = val => {
   if (!val) return "—";
-  return val.slice(0, 5); // HH:MM
+  const [hStr, mStr] = val.slice(0, 5).split(":");
+  let h = parseInt(hStr, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${String(h).padStart(2, "0")}:${mStr} ${ampm}`;
 };
-
-// ── CalendarView ──────────────────────────────────────────────────────────────
-
+ 
 const CalendarView = ({ apts, patientName, doctorName, tokenColors, statusColor }) => {
   const today = new Date();
   const [year,     setYear]     = useState(today.getFullYear());
   const [month,    setMonth]    = useState(today.getMonth());
   const [selected, setSelected] = useState(null);
-
+ 
   const prevMonth = () => {
     if (month === 0) { setYear(y => y - 1); setMonth(11); }
     else setMonth(m => m - 1);
@@ -35,53 +35,45 @@ const CalendarView = ({ apts, patientName, doctorName, tokenColors, statusColor 
     else setMonth(m => m + 1);
     setSelected(null);
   };
-
+ 
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay    = getFirstDayOfMonth(year, month);
-
+ 
   const aptsOnDay = day => {
     const dateStr = `${year}-${String(month + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     return apts.filter(a => a.appointment_date === dateStr);
   };
-
+ 
   const selectedApts = selected ? aptsOnDay(selected) : [];
-
+ 
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
+ 
   const isToday = day =>
     day &&
     today.getFullYear() === year &&
     today.getMonth()    === month &&
     today.getDate()     === day;
-
+ 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-
+ 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <h2 className="text-base font-semibold text-slate-800">
-          {MONTH_NAMES[month]} {year}
-        </h2>
+        <h2 className="text-base font-semibold text-slate-800">{MONTH_NAMES[month]} {year}</h2>
         <div className="flex gap-1">
-          <button
-            onClick={prevMonth}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-slate-500 hover:bg-gray-50 transition-colors text-sm font-bold"
-          >‹</button>
-          <button
-            onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelected(null); }}
-            className="px-3 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-slate-500 hover:bg-gray-50 transition-colors text-xs font-medium"
-          >Today</button>
-          <button
-            onClick={nextMonth}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-slate-500 hover:bg-gray-50 transition-colors text-sm font-bold"
-          >›</button>
+          <button onClick={prevMonth}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-slate-500 hover:bg-gray-50 transition-colors text-sm font-bold">‹</button>
+          <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelected(null); }}
+            className="px-3 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-slate-500 hover:bg-gray-50 transition-colors text-xs font-medium">Today</button>
+          <button onClick={nextMonth}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-slate-500 hover:bg-gray-50 transition-colors text-sm font-bold">›</button>
         </div>
       </div>
-
+ 
       <div className="flex">
-
+ 
         {/* Grid */}
         <div className="flex-1 p-4">
           <div className="grid grid-cols-7 mb-2">
@@ -89,14 +81,14 @@ const CalendarView = ({ apts, patientName, doctorName, tokenColors, statusColor 
               <div key={d} className="text-center text-xs font-semibold text-slate-400 py-1">{d}</div>
             ))}
           </div>
-
+ 
           <div className="grid grid-cols-7 gap-1">
             {cells.map((day, idx) => {
               if (!day) return <div key={`e-${idx}`} />;
               const dayApts    = aptsOnDay(day);
               const isSelected = selected === day;
               const isTodayDay = isToday(day);
-
+ 
               return (
                 <button
                   key={day}
@@ -136,7 +128,7 @@ const CalendarView = ({ apts, patientName, doctorName, tokenColors, statusColor 
             })}
           </div>
         </div>
-
+ 
         {/* Side panel */}
         {selected && (
           <div className="w-72 border-l border-gray-100 p-4 overflow-y-auto">
@@ -182,10 +174,10 @@ const CalendarView = ({ apts, patientName, doctorName, tokenColors, statusColor 
             )}
           </div>
         )}
-
+ 
       </div>
     </div>
   );
 };
-
+ 
 export default CalendarView;

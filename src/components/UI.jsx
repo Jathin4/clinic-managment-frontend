@@ -75,27 +75,27 @@ export const Btn = ({ children, onClick, variant = "primary", size = "md", disab
 };
 
 // ── Input ──────────────────────────────────────────────────────
-// min prop supported for date/time inputs
-export const Input = ({ label, type = "text", value, onChange, placeholder, required, min }) => (
+export const Input = ({ label, type = "text", value, onChange, placeholder, required, min, disabled }) => (
   <div>
     <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
     <input
       type={type} value={value ?? ""} onChange={e => onChange(e.target.value)}
-      placeholder={placeholder} required={required} min={min}
-      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-50 transition-all"
+      placeholder={placeholder} required={required} min={min} disabled={disabled}
+      className={`w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-50 transition-all ${disabled ? "bg-gray-50 text-slate-400 cursor-not-allowed border-gray-100" : "border-gray-200"}`}
     />
   </div>
 );
 
 // ── Select ─────────────────────────────────────────────────────
-export const Select = ({ label, value, onChange, options }) => (
+export const Select = ({ label, value, onChange, options, required, disabled }) => (
   <div>
     <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
     <select
       value={value} onChange={e => onChange(e.target.value)}
-      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 bg-white transition-all"
+      required={required} disabled={disabled}
+      className={`w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-teal-400 bg-white transition-all ${disabled ? "bg-gray-50 text-slate-400 cursor-not-allowed border-gray-100" : "border-gray-200"}`}
     >
-      <option value="">Select...</option>
+      <option value="">Select</option>
       {options.map(o => <option key={o.value || o} value={o.value || o}>{o.label || o}</option>)}
     </select>
   </div>
@@ -126,6 +126,7 @@ export const DataTable = ({
   title, subtitle, search, onSearch, searchPlaceholder, actions, empty,
   columns, data, rows,
   currentPage, totalPages, onPageChange, totalItems, pageSize, onPageSizeChange, pageSizeOptions,
+  tableHeight = 480,   // ← new prop, default 480px — pass any value you like
 }) => {
   const headers = columns.map(c => (typeof c === "string" ? c : c.label));
 
@@ -153,6 +154,7 @@ export const DataTable = ({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* toolbar */}
       <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="font-semibold text-slate-700">{title}</div>
@@ -162,22 +164,22 @@ export const DataTable = ({
           {onSearch && (
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icons.Search /></div>
-              <input value={search} onChange={e => onSearch(e.target.value)} placeholder={searchPlaceholder || "Search…"}
+              <input value={search} onChange={e => onSearch(e.target.value)} placeholder={searchPlaceholder || "Search..."}
                 className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:bg-white w-full sm:w-56 transition-all" />
             </div>
           )}
           {actions}
         </div>
       </div>
-      <div className="overflow-x-auto">
+
+      {/* ✅ fixed-height scrollable table body */}
+      <div style={{ height: tableHeight, overflowY: "auto", overflowX: "auto" }}>
         <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+          <thead className="sticky top-0 z-10 bg-white"><tr style={{ borderBottom: "1px solid #f1f5f9" }}>
               {headers.map(h => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "#94a3b8" }}>{h}</th>
               ))}
-            </tr>
-          </thead>
+            </tr></thead>
           <tbody>
             {isEmpty
               ? <tr><td colSpan={headers.length} className="text-center py-14 text-slate-400 text-sm">{empty || "No records found"}</td></tr>
@@ -185,6 +187,8 @@ export const DataTable = ({
           </tbody>
         </table>
       </div>
+
+      {/* pagination stays outside the scroll area */}
       {onPageChange && (
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange}
           totalItems={totalItems} pageSize={pageSize} onPageSizeChange={onPageSizeChange} pageSizeOptions={pageSizeOptions} />
@@ -234,11 +238,11 @@ export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, 
       <div className="flex items-center gap-1">
         <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage <= 1}
           className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-600">
-          ‹ Prev
+          Prev
         </button>
         {getPages().map((p, i) =>
           p === "..." ? (
-            <span key={`dot-${i}`} className="px-2 text-slate-400 text-sm">…</span>
+            <span key={`dot-${i}`} className="px-2 text-slate-400 text-sm">...</span>
           ) : (
             <button key={p} onClick={() => onPageChange(p)}
               className={`min-w-[34px] h-[34px] text-sm font-medium rounded-lg transition-all ${p === currentPage ? "text-white shadow-sm" : "text-slate-600 hover:bg-gray-50 border border-gray-200"}`}
@@ -249,7 +253,7 @@ export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, 
         )}
         <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage >= totalPages}
           className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-600">
-          Next ›
+          Next
         </button>
       </div>
     </div>
@@ -302,7 +306,7 @@ export const ICDSelect = ({ label, value, options = [], onChange }) => {
       {label && <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>}
       <button type="button" onClick={() => setOpen(o => !o)}
         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:border-teal-400 transition-all flex items-center justify-between">
-        <span className={selectedLabel ? "text-slate-800" : "text-slate-400"}>{selectedLabel || "Select..."}</span>
+        <span className={selectedLabel ? "text-slate-800" : "text-slate-400"}>{selectedLabel || "Select"}</span>
         <svg className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
