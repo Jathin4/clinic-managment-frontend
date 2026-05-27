@@ -187,14 +187,15 @@ const PatientDetailPage = ({ patient, onBack, onEdit }) => {
   const initials = `${patient.first_name?.[0] || ""}${patient.last_name?.[0] || ""}`.toUpperCase();
   const TABS = user?.role === "Admin" ? ["overview", "appointments", "encounters", "bills", "payments"] : ["overview", "appointments", "encounters"];
 
-  useEffect(() => {
+ useEffect(() => {
+    const doctorFilter = can(PERMISSIONS.DASH_OWN_PATIENTS) ? `&doctor_id=${user?.id}` : "";
     Promise.all([
-      fetch(`${API_BASE}/appointmentsread?clinic_id=${getClinicId()}`).then(r => r.json()),
-      fetch(`${API_BASE}/encountersread?clinic_id=${getClinicId()}`).then(r => r.json()),
+      fetch(`${API_BASE}/appointmentsread?clinic_id=${getClinicId()}${doctorFilter}`).then(r => r.json()),
+      fetch(`${API_BASE}/encountersread?clinic_id=${getClinicId()}${doctorFilter}`).then(r => r.json()),
     ]).then(([a, e]) => {
       setAppointments(Array.isArray(a) ? a.filter(x => x.patient_id === patient.id) : []);
       setEncounters(Array.isArray(e) ? e.filter(x => x.patient_id === patient.id) : []);
-    }).catch(console.error);
+    });
   }, [patient.id]);
 
   return (
@@ -426,7 +427,8 @@ const PatientsPage = () => {
 
   if (viewingPatient) return (
     <div>
-      <PatientDetailPage patient={viewingPatient} onBack={() => setViewingPatient(null)} onEdit={() => { openEdit(viewingPatient); setViewingPatient(null); }} />
+      <PatientDetailPage patient={viewingPatient} onBack={() => setViewingPatient(null)} onEdit={() => { openEdit(viewingPatient); setViewingPatient(null); }} user={user}
+  can={can} />
       {showModal && <RightDrawer title={editingPatient ? "Edit Patient" : "Add New Patient"} open={showModal} onClose={handleClose}><DrawerContent {...{ form, setField, errors, Required, Err: ErrorMsg, editingPatient, handleClose, handleSave }} /></RightDrawer>}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

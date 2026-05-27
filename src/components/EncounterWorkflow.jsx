@@ -4,6 +4,8 @@ import { RightDrawer, Btn, Input, Select, Toast, Modal } from "./UI";
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
+
+
 const getClinicId = () => {
   try { return JSON.parse(sessionStorage.getItem("user"))?.clinic_id ?? null; }
   catch { return null; }
@@ -211,11 +213,11 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#1e293b;display:fle
 // ── Doctor Fee Receipt Generator ────────────────────────────────────────────
 const generateDCFInvoiceNumber = async (clinicId) => {
   try {
-    const res  = await fetch(`${API_BASE}/bills_next_invoice?clinic_id=${clinicId}&prefix=INV`);
+    const res = await fetch(`${API_BASE}/bills_next_invoice?clinic_id=${clinicId}&prefix=INV`);
     const data = await res.json();
-    return data.invoice_number || `INV-${new Date().toISOString().slice(0,10).replace(/-/g,"")}-0001`;
+    return data.invoice_number || `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-0001`;
   } catch {
-    return `INV-${new Date().toISOString().slice(0,10).replace(/-/g,"")}-${String(Math.floor(Math.random()*9999)).padStart(4,"0")}`;
+    return `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`;
   }
 };
 
@@ -317,7 +319,7 @@ const printDCFReceipt = ({ invoiceNumber, encounter, patientName, doctorName, cl
   win.document.write(html);
   win.document.close();
 };
-export const printEncounterSummary = ({patientName, doctorName, encounter, prescriptions }) => {
+export const printEncounterSummary = ({ patientName, doctorName, encounter, prescriptions }) => {
   const rows = prescriptions.map(p => `
     <tr>
       <td>${p.medicine_name || "—"}</td>
@@ -390,12 +392,12 @@ export const printEncounterSummary = ({patientName, doctorName, encounter, presc
         <div class="section">
           <h2>Prescriptions (${prescriptions.length})</h2>
           ${prescriptions.length === 0
-            ? `<p style="color:#94a3b8;font-style:italic">No prescriptions added</p>`
-            : `<table>
+      ? `<p style="color:#94a3b8;font-style:italic">No prescriptions added</p>`
+      : `<table>
                 <thead><tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Instructions</th></tr></thead>
                 <tbody>${rows}</tbody>
                </table>`
-          }
+    }
         </div>
       </body>
     </html>
@@ -409,6 +411,7 @@ export const printEncounterSummary = ({patientName, doctorName, encounter, presc
 // ── Main component ────────────────────────────────────────────────────────────
 const EncounterWorkflow = ({ open, onClose, appointment, onComplete }) => {
   const CLINIC_ID = getClinicId();
+  
   const [tab, setTab] = useState("encounter");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -418,6 +421,10 @@ const EncounterWorkflow = ({ open, onClose, appointment, onComplete }) => {
 
   const [selectedPatient, setSelectedPatient] = useState(appointment?.patient_id || "");
   const [selectedDoctor, setSelectedDoctor] = useState(appointment?.doctor_id || "");
+  const draftKey = `encounter_draft_${appointment?.id || selectedPatient || "new"}`;
+
+  const [draftLoadedAt, setDraftLoadedAt] = useState(null);
+  const draftWasLoaded = useRef(false);
 
   // ── chief_complaint auto-filled from appointment notes ────────────────────
   const [encounter, setEncounter] = useState({
@@ -435,16 +442,16 @@ const EncounterWorkflow = ({ open, onClose, appointment, onComplete }) => {
 
   // Patients name directly visible if coming from appointment, else select dropdown is shown. Doctor is always a dropdown but disabled if coming from appointment (since doctor is fixed for that appointment).
   const [patientDisplayName, setPatientDisplayName] = useState(
-  appointment?.patient_name || ""
-);
+    appointment?.patient_name || ""
+  );
 
-// When patients load, update the display name
-useEffect(() => {
-  if (patients.length > 0 && selectedPatient) {
-    const p = patients.find(x => String(x.id) === String(selectedPatient));
-    if (p) setPatientDisplayName(`${p.first_name} ${p.last_name}`);
-  }
-}, [patients, selectedPatient]);
+  // When patients load, update the display name
+  useEffect(() => {
+    if (patients.length > 0 && selectedPatient) {
+      const p = patients.find(x => String(x.id) === String(selectedPatient));
+      if (p) setPatientDisplayName(`${p.first_name} ${p.last_name}`);
+    }
+  }, [patients, selectedPatient]);
 
   // diagnoses kept for payload but tab is hidden
   const [diagnoses] = useState([]);
@@ -460,14 +467,48 @@ useEffect(() => {
   };
 
   useEffect(() => {
-    if (!open) return;
-    fetch(`${API_BASE}/patient_read?clinic_id=${CLINIC_ID}`).then(r => r.json()).then(d => setPatients(Array.isArray(d) ? d : [])).catch(console.error);
-    fetch(`${API_BASE}/doctorsread`).then(r => r.json()).then(d => setDoctors(Array.isArray(d) ? d : [])).catch(console.error);
-  }, [open]);
+  if (!open) {
+    draftWasLoaded.current = false;
+    return;
+  }
+
+  // ── Reset state on every open ─────────────────────────────
+  setTab("encounter");
+  setEncounter({
+    chief_complaint: appointment?.notes || "",
+    notes: "",
+    follow_up_date: "",
+    BP: appointment?.patientBP || "",
+    pulse: "",
+    weight: "",
+    age: "",
+    fee: appointment?.fee || "",
+    test_notes: "",
+  });
+  setPrescriptions([]);
+  setSelectedDoctor(appointment?.doctor_id || "");
+  setDraftLoadedAt(null);
+
+  fetch(`${API_BASE}/patient_read?clinic_id=${CLINIC_ID}`).then(r => r.json()).then(d => setPatients(Array.isArray(d) ? d : [])).catch(console.error);
+  fetch(`${API_BASE}/doctorsread`).then(r => r.json()).then(d => setDoctors(Array.isArray(d) ? d : [])).catch(console.error);
+
+  // ── Load draft ──────────────────────────────────────────────
+  try {
+    const draft = JSON.parse(localStorage.getItem(draftKey));
+    if (draft) {
+      if (draft.encounter) setEncounter(prev => ({ ...prev, ...draft.encounter }));
+      if (draft.prescriptions) setPrescriptions(draft.prescriptions);
+      if (draft.selectedDoctor && !appointment?.doctor_id) setSelectedDoctor(draft.selectedDoctor);
+      if (draft.savedAt) setDraftLoadedAt(draft.savedAt);
+      draftWasLoaded.current = true;
+    }
+  } catch {}
+}, [open]);
 
   // Auto-populate encounter fields from patient data
   useEffect(() => {
-    if (selectedPatient && patients.length > 0) {
+  if (draftWasLoaded.current) return; 
+  if (selectedPatient && patients.length > 0) {
       const patient = patients.find(p => String(p.id) === String(selectedPatient));
       if (patient) {
         setEncounter(prev => ({
@@ -494,6 +535,18 @@ useEffect(() => {
     if (!encounter.chief_complaint.trim()) { showToast("Patient Notes is required", "error"); return false; }
     return true;
   };
+
+  const handleSaveDraft = () => {
+  localStorage.setItem(draftKey, JSON.stringify({
+    encounter,
+    prescriptions,
+    selectedDoctor,
+    savedAt: new Date().toISOString(),
+  }));
+  showToast("Draft saved successfully");
+  setTimeout(() => onClose(), 1000);  // ← close after toast shows
+};
+
 
   // ── Save only (no print) ──────────────────────────────────────────────────
   const handleComplete = async () => {
@@ -522,7 +575,11 @@ useEffect(() => {
       }
 
       showToast(billingSuccess ? "Encounter saved and doctor fee billed" : "Encounter saved successfully");
-      setTimeout(() => { onComplete?.(payload); onClose(); }, 500);
+      setTimeout(() => {
+        localStorage.removeItem(draftKey);   // ← clear draft
+        onComplete?.(payload);
+        onClose();
+      }, 500);
     } catch {
       showToast("Failed to save encounter", "error");
     } finally {
@@ -531,22 +588,22 @@ useEffect(() => {
   };
 
   // ── Print only (no save, no pre-check popup) ──────────────────────────────
- const handlePrint = () => {
-  console.log("prescriptions at print time:", prescriptions); // 👈 add this
-  const patientObj = patients.find(p => String(p.id) === String(selectedPatient));
-  const patientName = patientObj ? `${patientObj.first_name} ${patientObj.last_name}` : "";
-  const doctorName = doctors.find(d => String(d.id) === String(selectedDoctor))?.name || "";
+  const handlePrint = () => {
+    console.log("prescriptions at print time:", prescriptions); // 👈 add this
+    const patientObj = patients.find(p => String(p.id) === String(selectedPatient));
+    const patientName = patientObj ? `${patientObj.first_name} ${patientObj.last_name}` : "";
+    const doctorName = doctors.find(d => String(d.id) === String(selectedDoctor))?.name || "";
 
-  // Auto-add any medicine that's typed but not yet added
-  let finalPrescriptions = [...prescriptions];
-  if (rxForm.medicine_name.trim()) {
-    finalPrescriptions = [...finalPrescriptions, { ...rxForm, id: Date.now() }];
-    setPrescriptions(finalPrescriptions);
-    setRxForm({ medicine_name: "", dosage: "", frequency: "", duration: "", instructions: "" });
-  }
+    // Auto-add any medicine that's typed but not yet added
+    let finalPrescriptions = [...prescriptions];
+    if (rxForm.medicine_name.trim()) {
+      finalPrescriptions = [...finalPrescriptions, { ...rxForm, id: Date.now() }];
+      setPrescriptions(finalPrescriptions);
+      setRxForm({ medicine_name: "", dosage: "", frequency: "", duration: "", instructions: "" });
+    }
 
-  printEncounterSummary({ patientName, doctorName, encounter, prescriptions: finalPrescriptions });
-};
+    printEncounterSummary({ patientName, doctorName, encounter, prescriptions: finalPrescriptions });
+  };
 
 
 
@@ -584,9 +641,8 @@ useEffect(() => {
               const Icon = TAB_ICONS[t];
               return (
                 <button key={t} onClick={() => setTab(t)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium capitalize transition-colors ${
-                    tab === t ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500 hover:text-gray-700"
-                  }`}>
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium capitalize transition-colors ${tab === t ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500 hover:text-gray-700"
+                    }`}>
                   <Icon /> {t}
                 </button>
               );
@@ -599,14 +655,19 @@ useEffect(() => {
             {/* ── Encounter tab ── */}
             {tab === "encounter" && (
               <>
+                {draftLoadedAt && (
+                  <div className="text-xs text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-100">
+                    ↩ Draft restored from {new Date(draftLoadedAt).toLocaleString()}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   {appointment ? (
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">Patient <span className="text-red-500">*</span></label>
                       <div className="w-full px-4 py-2.5 border border-teal-200 bg-teal-50 rounded-xl text-sm flex items-center justify-between" style={{ minHeight: 42 }}>
                         <span className="font-medium text-gray-800">
-  {patientDisplayName || `Patient #${selectedPatient}`}
-</span>
+                          {patientDisplayName || `Patient #${selectedPatient}`}
+                        </span>
                         {/* <span className="text-xs text-teal-600 font-semibold bg-white px-2 py-0.5 rounded-lg border border-teal-200">Fixed</span> */}
                       </div>
                     </div>
@@ -622,7 +683,7 @@ useEffect(() => {
                   <SearchableSelect
                     label={<>Doctor <Required /></>}
                     value={selectedDoctor}
-                    onChange={appointment ? () => {} : setSelectedDoctor}
+                    onChange={appointment ? () => { } : setSelectedDoctor}
                     placeholder="Select doctor..."
                     options={doctors.map(d => ({ value: d.id, label: d.name }))}
                   />
@@ -729,7 +790,7 @@ useEffect(() => {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  
+
                   <Input
                     label="Duration"
                     value={rxForm.duration}
@@ -737,13 +798,13 @@ useEffect(() => {
                     placeholder="e.g. 5 days"
                   />
                   <Input
-                  label="Instructions"
-                  value={rxForm.instructions}
-                  onChange={v => setRxForm(f => ({ ...f, instructions: v }))}
-                  placeholder="e.g. After meals"
+                    label="Instructions"
+                    value={rxForm.instructions}
+                    onChange={v => setRxForm(f => ({ ...f, instructions: v }))}
+                    placeholder="e.g. After meals"
                   />
                 </div>
-                
+
                 <Btn onClick={addPrescription}><Icons.Plus /> Add Medicine</Btn>
 
                 {prescriptions.map(p => (
@@ -766,33 +827,38 @@ useEffect(() => {
 
           {/* Footer */}
           {/* Footer */}
-<div className="p-6 border-t bg-gray-50 flex justify-between items-center gap-3">
-  <div>
-    {tabIndex > 0 && (
-      <Btn variant="secondary" onClick={() => setTab(TABS[tabIndex - 1])}>Back</Btn>
-    )}
-  </div>
+          <div className="p-6 border-t bg-gray-50 flex justify-between items-center gap-3">
+            <div>
+              {tabIndex > 0 && (
+                <Btn variant="secondary" onClick={() => setTab(TABS[tabIndex - 1])}>Back</Btn>
+              )}
+            </div>
 
-  <div className="flex gap-3">
-    {tabIndex < TABS.length - 1 ? (
-      <Btn onClick={() => {
-        if (!validateEncounter()) return;
-        setTab(TABS[tabIndex + 1]);
-      }}>
-        Next
-      </Btn>
-    ) : (
-      <>
-        <Btn variant="secondary" onClick={handlePrint}>
-          <Icons.Download /> Print
-        </Btn>
-        <Btn onClick={handleComplete} disabled={saving}>
-          {saving ? "Saving..." : <><Icons.Check /> Complete</>}
-        </Btn>
-      </>
-    )}
-  </div>
-</div>
+            <div className="flex gap-3">
+              <Btn variant="secondary" onClick={handleSaveDraft}>
+                <Icons.Check /> Save Draft
+              </Btn>
+              {tabIndex < TABS.length - 1 ? (
+
+
+                <Btn onClick={() => {
+                  if (!validateEncounter()) return;
+                  setTab(TABS[tabIndex + 1]);
+                }}>
+                  Next
+                </Btn>
+              ) : (
+                <>
+                  <Btn variant="secondary" onClick={handlePrint}>
+                    <Icons.Download /> Print
+                  </Btn>
+                  <Btn onClick={handleComplete} disabled={saving}>
+                    {saving ? "Saving..." : <><Icons.Check /> Complete</>}
+                  </Btn>
+                </>
+              )}
+            </div>
+          </div>
 
         </div>
       </RightDrawer>

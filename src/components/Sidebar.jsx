@@ -51,13 +51,13 @@ const SIDEBAR_SECTIONS = [
       { id: "reports", label: "Reports", icon: Icons.Reports, permission: PERMISSIONS.VIEW_REPORTS },
     ],
   },
-  {
-    section: "Settings",
-    permission: PERMISSIONS.VIEW_SETTINGS,
-    items: [
-      { id: "settings", label: "Settings", icon: Icons.Settings, permission: PERMISSIONS.VIEW_SETTINGS },
-    ],
-  },
+  // {
+  //   section: "Settings",
+  //   permission: PERMISSIONS.VIEW_SETTINGS,
+  //   items: [
+  //     { id: "settings", label: "Settings", icon: Icons.Settings, permission: PERMISSIONS.VIEW_SETTINGS },
+  //   ],
+  // },
 ];
 
 // ── Pharmacy Sales icon (shopping cart) ───────────────────────────────────────

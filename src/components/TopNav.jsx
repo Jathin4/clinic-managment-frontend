@@ -25,12 +25,12 @@ const TopNav = () => {
        
       </div>
       <div className="flex items-center gap-1 sm:gap-2">
-        <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl text-slate-400">
+        {/* <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl text-slate-400">
           <Icons.Search />
           <input placeholder="Quick search..." className="bg-transparent text-sm outline-none w-32 md:w-48 text-slate-600 placeholder:text-slate-400" />
-        </div>
+        </div> */}
 
-        {/* Notifications */}
+        {/* Notifications
         <button className="relative p-2.5 hover:bg-gray-100 rounded-xl transition-colors" onClick={() => { setShowNotifs(!showNotifs); setShowUser(false); }}>
           <Icons.Bell />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -44,12 +44,13 @@ const TopNav = () => {
               </div>
             ))}
           </div>
-        )}
+        )} */}
 
         {/* User */}
         <button
           className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-xl transition-colors"
           onClick={() => { setShowUser(!showUser); setShowNotifs(false); }}
+          
         >
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: "linear-gradient(135deg,#0E6C68,#14A3A0)" }}>
             {user?.full_name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U'}
