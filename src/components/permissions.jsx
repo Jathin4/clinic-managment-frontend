@@ -7,11 +7,11 @@ export const PERMISSIONS = {
   VIEW_APPOINTMENTS:     "view_appointments",
   VIEW_ENCOUNTERS:       "view_encounters",
   VIEW_BILLING:          "view_billing",
-  VIEW_EXPENSES:         "view_expenses",            // ← NEW
+  VIEW_EXPENSES:         "view_expenses",
   VIEW_INVENTORY:        "view_inventory",
   VIEW_REPORTS:          "view_reports",
   VIEW_SETTINGS:         "view_settings",
-  VIEW_ATTENDANCE:       "view_attendance",          // ← NEW
+  VIEW_ATTENDANCE:       "view_attendance",
 
   // ── Dashboard KPI cards ───────────────────────────
   DASH_ALL_PATIENTS:        "dash_all_patients",
@@ -20,8 +20,8 @@ export const PERMISSIONS = {
   DASH_OWN_APPOINTMENTS:    "dash_own_appointments",
   DASH_REVENUE:             "dash_revenue",
   DASH_EXPENSES:            "dash_expenses",
-  DASH_APT_PER_DOCTOR_ALL:  "dash_apt_per_doctor_all",   // all doctors bar chart
-  DASH_APT_PER_DOCTOR_OWN:  "dash_apt_per_doctor_own",   // only his bar
+  DASH_APT_PER_DOCTOR_ALL:  "dash_apt_per_doctor_all",
+  DASH_APT_PER_DOCTOR_OWN:  "dash_apt_per_doctor_own",
   DASH_PAYMENT_MODES:       "dash_payment_modes",
   DASH_RECENT_PAYMENTS:     "dash_recent_payments",
 };
@@ -39,7 +39,7 @@ const ADMIN_SCREENS = [
   PERMISSIONS.VIEW_INVENTORY,
   PERMISSIONS.VIEW_REPORTS,
   PERMISSIONS.VIEW_SETTINGS,
-  PERMISSIONS.VIEW_ATTENDANCE,                           // ← NEW
+  PERMISSIONS.VIEW_ATTENDANCE,
 ];
 
 const ADMIN_DASHBOARD = [
@@ -64,10 +64,12 @@ const ROLE_PERMISSIONS = {
     ...ADMIN_SCREENS,
     ...ADMIN_DASHBOARD,
   ],
-  "Admin+Receptionist": [
+  // ✅ ADDED: Receptionist+Pharmacist → full admin access
+  "Receptionist+Pharmacist": [
     ...ADMIN_SCREENS,
     ...ADMIN_DASHBOARD,
   ],
+  // ❌ REMOVED: "Admin+Receptionist"
 
   // ── Single: Admin ─────────────────────────────────
   Admin: [
@@ -81,6 +83,7 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_PATIENTS,
     PERMISSIONS.VIEW_APPOINTMENTS,
     PERMISSIONS.VIEW_ENCOUNTERS,
+    PERMISSIONS.VIEW_REPORTS,
     // dashboard — only own data
     PERMISSIONS.DASH_OWN_PATIENTS,
     PERMISSIONS.DASH_OWN_APPOINTMENTS,
@@ -93,23 +96,20 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_PATIENTS,
     PERMISSIONS.VIEW_APPOINTMENTS,
     PERMISSIONS.VIEW_ENCOUNTERS,
-    PERMISSIONS.VIEW_ATTENDANCE,                         // ← NEW
+    PERMISSIONS.VIEW_BILLING,
+    PERMISSIONS.VIEW_ATTENDANCE,
     // dashboard
     PERMISSIONS.DASH_ALL_PATIENTS,
     PERMISSIONS.DASH_ALL_APPOINTMENTS,
   ],
 
   // ── Single: Pharmacist ────────────────────────────
+  // ✅ FIXED: Only Bills, Inventory, PharmSales, Dashboard (per your notes)
   Pharmacist: [
     PERMISSIONS.VIEW_DASHBOARD,
-    PERMISSIONS.VIEW_PATIENTS,
-    PERMISSIONS.VIEW_APPOINTMENTS,
-    PERMISSIONS.VIEW_ENCOUNTERS,
     PERMISSIONS.VIEW_BILLING,
     PERMISSIONS.VIEW_INVENTORY,
     // dashboard
-    PERMISSIONS.DASH_ALL_PATIENTS,
-    PERMISSIONS.DASH_ALL_APPOINTMENTS,
     PERMISSIONS.DASH_PAYMENT_MODES,
     PERMISSIONS.DASH_RECENT_PAYMENTS,
   ],
@@ -137,8 +137,6 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.DASH_ALL_APPOINTMENTS,
   ],
 };
-
-
 
 // ── Helper ────────────────────────────────────────────────────
 export const getUserPermissions = (role) => {

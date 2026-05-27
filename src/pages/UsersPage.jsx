@@ -31,22 +31,22 @@ const UsersPage = () => {
 
   const [clinicInfo, setClinicInfo] = useState(null);
 
-useEffect(() => { fetchUsers(); fetchClinic(); }, []);
+  useEffect(() => { fetchUsers(); fetchClinic(); }, []);
 
-const fetchClinic = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/clinicsread?clinic_id=${userObj?.clinic_id}`);
-    const data = await response.json();
-    if (response.ok) {
-      const clinic = Array.isArray(data)
-        ? data.find(c => c.id === userObj?.clinic_id)
-        : data.clinic || data;
-      setClinicInfo(clinic);
+  const fetchClinic = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clinicsread?clinic_id=${userObj?.clinic_id}`);
+      const data = await response.json();
+      if (response.ok) {
+        const clinic = Array.isArray(data)
+          ? data.find(c => c.id === userObj?.clinic_id)
+          : data.clinic || data;
+        setClinicInfo(clinic);
+      }
+    } catch (error) {
+      console.error("Error fetching clinic:", error);
     }
-  } catch (error) {
-    console.error("Error fetching clinic:", error);
-  }
-};
+  };
 
   const blank = {
     full_name: "", email: "", phone: "", role: "", date_of_birth: "",
@@ -375,8 +375,8 @@ const fetchClinic = async () => {
   return (
     <div className="bg-slate-50 min-h-screen">
       <PageHeader
-  title="Users & Staff"
-  subtitle={`${userObj?.clinic_name}${clinicInfo?.city ? ` • ${clinicInfo.city}, ${clinicInfo.state}` : ""}`}
+        title="Users & Staff"
+        subtitle={`${userObj?.clinic_name}${clinicInfo?.city ? ` • ${clinicInfo.city}, ${clinicInfo.state}` : ""}`}
 
 
         actions={
@@ -448,8 +448,8 @@ const fetchClinic = async () => {
                   <button
                     onClick={() => handleModeToggle("USER")}
                     className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${registerMode === "USER"
-                        ? "bg-teal-600 text-white shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                      ? "bg-teal-600 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
                       }`}
                   >
                     USER
@@ -457,8 +457,8 @@ const fetchClinic = async () => {
                   <button
                     onClick={() => handleModeToggle("STAFF")}
                     className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${registerMode === "STAFF"
-                        ? "bg-teal-600 text-white shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                      ? "bg-teal-600 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
                       }`}
                   >
                     STAFF
@@ -661,7 +661,7 @@ const fetchClinic = async () => {
                             { label: "Receptionist", value: "Receptionist" },
                             { label: "Admin + Doctor", value: "Admin+Doctor" },
                             { label: "Admin + Pharmacist", value: "Admin+Pharmacist" },
-                            { label: "Admin + Receptionist", value: "Admin+Receptionist" },
+                            { label: "Receptionist + Pharmacist", value: "Receptionist+Pharmacist" },  // ✅ ADD THIS
                           ]}
                           required
                         />

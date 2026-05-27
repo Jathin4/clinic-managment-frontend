@@ -22,9 +22,8 @@ const fmtDate = v => v ? v.slice(0, 10).split("-").reverse().join("-") : "—";
 
 
 const EncountersPage = () => {
-    const { showLoading, hideLoading, can } = useApp();
-    const userObj = (() => { try { const u = sessionStorage.getItem("user"); return u ? JSON.parse(u) : {}; } catch { return {}; } })();
-    
+    const { showLoading, hideLoading, can, user } = useApp();
+
     const [encounters, setEncounters] = useState([]);
     const [patients, setPatients] = useState([]);
     const [doctors, setDoctors] = useState([]);
@@ -61,7 +60,7 @@ const EncountersPage = () => {
             setIsLoading(true);
             showLoading("Loading encounters...", "encounters");
             const res = await fetch(
-                `${API}/encountersread?clinic_id=${userObj.clinic_id}${can(PERMISSIONS.DASH_OWN_PATIENTS) ? `&doctor_id=${userObj.id}` : ""}`
+                `${API}/encountersread?clinic_id=${user?.clinic_id}${can(PERMISSIONS.DASH_OWN_PATIENTS) ? `&doctor_id=${user?.id}` : ""}`
             );
             if (!res.ok) throw new Error();
             const data = await res.json();
@@ -74,7 +73,7 @@ const EncountersPage = () => {
     const fetchPatients = async () => {
         try {
             const res = await fetch(
-                `${API}/patient_read?clinic_id=${userObj.clinic_id}${can(PERMISSIONS.DASH_OWN_PATIENTS) ? `&doctor_id=${userObj.id}` : ""}`
+                `${API}/patient_read?clinic_id=${user?.clinic_id}${can(PERMISSIONS.DASH_OWN_PATIENTS) ? `&doctor_id=${user?.id}` : ""}`
             );
             if (!res.ok) throw new Error();
             const data = await res.json();
@@ -114,7 +113,7 @@ const EncountersPage = () => {
         if (!validate()) return;
         try {
             const payload = {
-                id: editingEncounter?.id || null, clinic_id: userObj.clinic_id, patient_id: Number(form.patient_id),
+                id: editingEncounter?.id || null, clinic_id: user?.clinic_id, patient_id: Number(form.patient_id),
                 doctor_id: form.doctor_id ? Number(form.doctor_id) : null,
                 appointment_id: form.appointment_id ? Number(form.appointment_id) : null,
                 visit_date: form.visit_date, BP: form.BP || null, chief_complaint: form.chief_complaint,
@@ -156,11 +155,11 @@ const EncountersPage = () => {
             <PageHeader
                 title="Encounters"
                 subtitle="Manage clinical encounter records"
-                // actions={
-                //     <Btn onClick={() => setEncounterApt({ patient_id: form.patient_id, doctor_id: form.doctor_id })}>
-                //         <Icons.Plus /> New Encounter
-                //     </Btn>
-                // }
+            // actions={
+            //     <Btn onClick={() => setEncounterApt({ patient_id: form.patient_id, doctor_id: form.doctor_id })}>
+            //         <Icons.Plus /> New Encounter
+            //     </Btn>
+            // }
             />
 
             {isLoading ? (

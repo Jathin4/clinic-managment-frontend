@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Icons from '../components/Icons';
 import { PageHeader, TR, TD, Btn, Badge, StatCard } from '../components/UI';
+import { useApp } from '../context/AppContext';
+import { PERMISSIONS } from '../components/permissions';
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL;
 const getClinicId = () => { try { const u = sessionStorage.getItem('user'); return u ? JSON.parse(u)?.clinic_id : null; } catch { return null; } };
@@ -238,18 +240,18 @@ const RevenueTab = ({ bills, loading }) => {
 const DoctorsTab = ({ appointments, doctors, loading }) => {
   const { search, setSearch } = useSearch();
   const doctorStats = useMemo(() => {
-  const map = {};
-  appointments.forEach(a => {
-    const doc = doctors.find(d => String(d.id) === String(a.doctor_id));
-    const name = doc?.name?.trim() || `Doctor #${a.doctor_id}`;
+    const map = {};
+    appointments.forEach(a => {
+      const doc = doctors.find(d => String(d.id) === String(a.doctor_id));
+      const name = doc?.name?.trim() || `Doctor #${a.doctor_id}`;
 
-    const key = String(a.doctor_id);
-    if (!map[key]) map[key] = { doctor: name, appointments: 0, completed: 0 };
-    map[key].appointments++;
-    if (a.status === 'Completed') map[key].completed++;
-  });
-  return Object.values(map).sort((a, b) => b.appointments - a.appointments);
-}, [appointments, doctors]);
+      const key = String(a.doctor_id);
+      if (!map[key]) map[key] = { doctor: name, appointments: 0, completed: 0 };
+      map[key].appointments++;
+      if (a.status === 'Completed') map[key].completed++;
+    });
+    return Object.values(map).sort((a, b) => b.appointments - a.appointments);
+  }, [appointments, doctors]);
 
   const filtered = doctorStats.filter(d => d.doctor.toLowerCase().includes(search.toLowerCase()));
   const { paginated, pagination } = usePagination(filtered);
@@ -270,7 +272,7 @@ const DoctorsTab = ({ appointments, doctors, loading }) => {
           bars={[{ key: 'appointments', name: 'Total', fill: '#0E6C68' }, { key: 'completed', name: 'Completed', fill: '#5DCAA5' }]} height={240} />
       </ChartCard>
 
-      <DataTable title="Doctor Performance" columns={['Doctor', 'Role', 'Total Apts', 'Completed', 'Completion Rate', 'Avg Rating']}
+      {/* <DataTable title="Doctor Performance" columns={['Doctor', 'Role', 'Total Apts', 'Completed', 'Completion Rate', 'Avg Rating']}
         search={search} onSearch={setSearch} actions={<CsvBtn data={filtered} filename="doctor_performance.csv" />}
         pagination={pagination}
         rows={paginated.map((d, i) => {
@@ -293,7 +295,7 @@ const DoctorsTab = ({ appointments, doctors, loading }) => {
             </TR>
           );
         })}
-      />
+      /> */}
     </div>
   );
 };
@@ -449,11 +451,11 @@ const ExpensesTab = ({ expenses, loading }) => {
   const [modeFilter, setModeFilter] = useState('All');
 
   const categories = useMemo(() => ['All', ...new Set(expenses.map(e => e.expense_category).filter(Boolean))], [expenses]);
-  const modes      = useMemo(() => ['All', ...new Set(expenses.map(e => e.payment_mode).filter(Boolean))], [expenses]);
+  const modes = useMemo(() => ['All', ...new Set(expenses.map(e => e.payment_mode).filter(Boolean))], [expenses]);
 
   const filtered = useMemo(() => expenses.filter(e => {
     const q = search.toLowerCase();
-    return (!q || [e.expense_category, e.description, e.payment_mode].some(v => (v||'').toLowerCase().includes(q)))
+    return (!q || [e.expense_category, e.description, e.payment_mode].some(v => (v || '').toLowerCase().includes(q)))
       && (categoryFilter === 'All' || e.expense_category === categoryFilter)
       && (modeFilter === 'All' || e.payment_mode === modeFilter);
   }), [expenses, search, categoryFilter, modeFilter]);
@@ -462,21 +464,21 @@ const ExpensesTab = ({ expenses, loading }) => {
 
   const monthlyChart = useMemo(() => {
     const keys = lastNMonths(7), map = {};
-    expenses.forEach(e => { const k = toMonthKey(e.expense_date); if (k) map[k] = (map[k]||0) + Number(e.amount||0); });
-    return keys.map(k => ({ month: toMonthShort(new Date(k)) || k.split(' ')[0], amount: Math.round(map[k]||0) }));
+    expenses.forEach(e => { const k = toMonthKey(e.expense_date); if (k) map[k] = (map[k] || 0) + Number(e.amount || 0); });
+    return keys.map(k => ({ month: toMonthShort(new Date(k)) || k.split(' ')[0], amount: Math.round(map[k] || 0) }));
   }, [expenses]);
 
   const categoryChart = useMemo(() => {
     const map = {};
-    expenses.forEach(e => { const c = e.expense_category||'Other'; map[c] = (map[c]||0) + Number(e.amount||0); });
-    return Object.entries(map).map(([name, value]) => ({ name, value: Math.round(value) })).sort((a,b) => b.value - a.value);
+    expenses.forEach(e => { const c = e.expense_category || 'Other'; map[c] = (map[c] || 0) + Number(e.amount || 0); });
+    return Object.entries(map).map(([name, value]) => ({ name, value: Math.round(value) })).sort((a, b) => b.value - a.value);
   }, [expenses]);
 
-  const totalExpenses  = filtered.reduce((s, e) => s + Number(e.amount||0), 0);
-  const thisMonthK     = toMonthKey(new Date().toISOString());
-  const thisMonthTotal = expenses.filter(e => toMonthKey(e.expense_date) === thisMonthK).reduce((s,e) => s + Number(e.amount||0), 0);
+  const totalExpenses = filtered.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const thisMonthK = toMonthKey(new Date().toISOString());
+  const thisMonthTotal = expenses.filter(e => toMonthKey(e.expense_date) === thisMonthK).reduce((s, e) => s + Number(e.amount || 0), 0);
 
-  const modeClass = m => m==='Cash' ? 'bg-green-50 text-green-700 border-green-200' : m==='Card' ? 'bg-blue-50 text-blue-700 border-blue-100' : m==='UPI' ? 'bg-violet-50 text-violet-700 border-violet-100' : 'bg-gray-100 text-gray-600 border-gray-200';
+  const modeClass = m => m === 'Cash' ? 'bg-green-50 text-green-700 border-green-200' : m === 'Card' ? 'bg-blue-50 text-blue-700 border-blue-100' : m === 'UPI' ? 'bg-violet-50 text-violet-700 border-violet-100' : 'bg-gray-100 text-gray-600 border-gray-200';
 
   if (loading) return <SkeletonSet />;
   if (!expenses.length) return <EmptyState msg="No expense records found" />;
@@ -484,22 +486,22 @@ const ExpensesTab = ({ expenses, loading }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Total Expenses"    value={fmt(totalExpenses)}    change="filtered"   icon={Icons.DollarSign} bgColor="#FEE2E2" />
-        <StatCard title="This Month"        value={fmt(thisMonthTotal)}   change="this month" icon={Icons.TrendUp}    bgColor="#FEF3C7" />
-        <StatCard title="Categories"        value={categories.length - 1} change="types"      icon={Icons.Check}      bgColor="#EDE9FE" />
+        <StatCard title="Total Expenses" value={fmt(totalExpenses)} change="filtered" icon={Icons.DollarSign} bgColor="#FEE2E2" />
+        <StatCard title="This Month" value={fmt(thisMonthTotal)} change="this month" icon={Icons.TrendUp} bgColor="#FEF3C7" />
+        <StatCard title="Categories" value={categories.length - 1} change="types" icon={Icons.Check} bgColor="#EDE9FE" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <ChartCard title="Monthly Expenses (last 7 months)" empty={monthlyChart.every(m => !m.amount) ? 'No expense data' : null}>
-          <SimpleBarChart data={monthlyChart} bars={[{ key:'amount', name:'Expenses', fill:'#ef4444' }]} />
+          <SimpleBarChart data={monthlyChart} bars={[{ key: 'amount', name: 'Expenses', fill: '#ef4444' }]} />
         </ChartCard>
         <ChartCard title="Expenses by Category" empty={!categoryChart.length ? 'No data' : null}>
-          <SimpleBarChart data={categoryChart.slice(0,6)} xKey="name" bars={[{ key:'value', name:'Amount', fill:'#f97316' }]} height={250} />
+          <SimpleBarChart data={categoryChart.slice(0, 6)} xKey="name" bars={[{ key: 'value', name: 'Amount', fill: '#f97316' }]} height={250} />
         </ChartCard>
       </div>
 
       <DataTable title="Expense Records" subtitle={`${filtered.length} records`}
-        columns={['Category','Description','Amount','Payment Mode','Date']}
+        columns={['Category', 'Description', 'Amount', 'Payment Mode', 'Date']}
         search={search} onSearch={setSearch} pagination={pagination}
         actions={
           <div className="flex gap-2">
@@ -516,9 +518,9 @@ const ExpensesTab = ({ expenses, loading }) => {
         }
         rows={paginated.map(e => (
           <TR key={e.id}>
-            <TD><span className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-orange-50 text-orange-700 border-orange-200">{e.expense_category||'—'}</span></TD>
-            <TD>{e.description||'—'}</TD>
-            <TD bold><span className="text-red-600">₹{Number(e.amount||0).toLocaleString()}</span></TD>
+            <TD><span className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-orange-50 text-orange-700 border-orange-200">{e.expense_category || '—'}</span></TD>
+            <TD>{e.description || '—'}</TD>
+            <TD bold><span className="text-red-600">₹{Number(e.amount || 0).toLocaleString()}</span></TD>
             <TD>{e.payment_mode ? <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${modeClass(e.payment_mode)}`}>{e.payment_mode}</span> : '—'}</TD>
             <TD muted>{e.expense_date ? new Date(e.expense_date).toLocaleDateString('en-IN') : '—'}</TD>
           </TR>
@@ -531,14 +533,18 @@ const ExpensesTab = ({ expenses, loading }) => {
 // ═══════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════
-const TABS = [['revenue','Revenue'],['doctors','Doctor Performance'],['patients','Patient Growth'],['medicines','Medicine Sales'],['expenses','Expenses']];
+const TABS_ALL = [['revenue','Revenue'],['doctors','Doctor Performance'],['patients','Patient Growth'],['medicines','Medicine Sales'],['expenses','Expenses']];
+const TABS_DOCTOR = [['revenue','Revenue'],['doctors','Doctor Performance'],['patients','Patient Growth']];
 
-const TAB_CSV_MAP = { revenue:['bills','bills_report.csv'], doctors:['appointments','doctor_appointments.csv'], patients:['patients','patients_report.csv'], medicines:['inventory','inventory_report.csv'], expenses:['expenses','expenses_report.csv'] };
+const TAB_CSV_MAP = { revenue: ['bills', 'bills_report.csv'], doctors: ['appointments', 'doctor_appointments.csv'], patients: ['patients', 'patients_report.csv'], medicines: ['inventory', 'inventory_report.csv'], expenses: ['expenses', 'expenses_report.csv'] };
 
 const ReportsPage = () => {
+  const { user, can } = useApp();
+  const TABS = can(PERMISSIONS.DASH_OWN_PATIENTS) ? TABS_DOCTOR : TABS_ALL;
   const [tab, setTab] = useState('revenue');
   const clinicId = getClinicId();
- const [data, setData] = useState({ bills:[], patients:[], appointments:[], doctors:[], inventory:[], expenses:[] });
+  const doctorFilter = can(PERMISSIONS.DASH_OWN_PATIENTS) ? `&doctor_id=${user?.id}` : "";
+  const [data, setData] = useState({ bills: [], patients: [], appointments: [], doctors: [], inventory: [], expenses: [] });
   const [loadingMap, setLoadingMap] = useState(Object.fromEntries(TABS.map(([id]) => [id, true])));
   const [errors, setErrors] = useState({});
 
@@ -550,7 +556,7 @@ const ReportsPage = () => {
 
   useEffect(() => {
     if (!clinicId) { TABS.forEach(([id]) => setError(id, 'No clinic ID found in session')); return; }
-    const q = `?clinic_id=${clinicId}`;
+    const q = `?clinic_id=${clinicId}${doctorFilter}`;
     const load = (url, field, tabKey) =>
       fetch(`${API_BASE}/${url}${q}`).then(r => r.json())
         .then(d => { setField(field, Array.isArray(d) ? d : []); setLoaded(tabKey); })
@@ -596,7 +602,7 @@ const ReportsPage = () => {
       {tab === 'doctors' && <DoctorsTab appointments={data.appointments} doctors={data.doctors} loading={loadingMap.doctors} />}
       {tab === 'patients' && <PatientsTab patients={data.patients} loading={loadingMap.patients} />}
       {tab === 'medicines' && <MedicinesTab inventory={data.inventory} loading={loadingMap.medicines} />}
-      {tab==='expenses' && <ExpensesTab expenses={data.expenses} loading={loadingMap.expenses} />}
+      {tab === 'expenses' && <ExpensesTab expenses={data.expenses} loading={loadingMap.expenses} />}
     </div>
   );
 };
