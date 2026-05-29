@@ -75,7 +75,7 @@ const storeDCFBill = async (clinicId, apt, patientName, invoiceNumber) => {
         chief_complaint: apt.chief_complaint || apt.notes || "Doctor Consultation",
         invoice_number: invoiceNumber,
         sale_invoice_number: null,
-        payment_mode: "Cash",
+        payment_mode: apt.payment_mode || "Cash",
         subtotal: fee,
         gst_percent: 0,
         gst_amount: 0,

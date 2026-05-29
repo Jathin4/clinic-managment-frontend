@@ -12,7 +12,7 @@ export const LineChart = ({ data, height = 200 }) => {
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height }}>
       <defs>
         <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#0E6C68" stopOpacity="0.3" />
+          <stop offset="0%" stopColor="#0E6C68" stopOpacity="0.3" />
           <stop offset="100%" stopColor="#0E6C68" stopOpacity="0.02" />
         </linearGradient>
       </defs>
@@ -70,7 +70,7 @@ export const BarChart = ({ data, height = 200 }) => {
             <rect x={bx} y={pad.t + ch - bh} width={bw} height={bh} rx="6" fill="#DFF7F6" />
             {completedVal > 0
               ? <rect x={bx} y={pad.t + ch - bh2} width={bw} height={bh2} rx="6" fill="#0E6C68" />
-              : <rect x={bx} y={pad.t + ch - bh}  width={bw} height={bh}  rx="6" fill="#0E6C68" />
+              : <rect x={bx} y={pad.t + ch - bh} width={bw} height={bh} rx="6" fill="#0E6C68" />
             }
             <text x={bx + bw / 2} y={h - pad.b + 16} textAnchor="middle" fontSize="9" fill="#94a3b8">
               {label}
@@ -93,7 +93,7 @@ export const DonutChart = ({ data, size = 160 }) => {
     <svg viewBox={`0 0 ${size} ${size}`} style={{ width: size, height: size }}>
       {data.map((d, i) => {
         const sweep = (d.value / total) * 360;
-        
+
         // ✅ Fix: full circle when sweep is 360 (single segment)
         if (sweep >= 359.99) {
           angle += sweep;
@@ -101,17 +101,17 @@ export const DonutChart = ({ data, size = 160 }) => {
         }
 
         const startRad = (angle * Math.PI) / 180;
-        const endRad   = ((angle + sweep) * Math.PI) / 180;
+        const endRad = ((angle + sweep) * Math.PI) / 180;
         const x1 = cx + r * Math.cos(startRad), y1 = cy + r * Math.sin(startRad);
-        const x2 = cx + r * Math.cos(endRad),   y2 = cy + r * Math.sin(endRad);
+        const x2 = cx + r * Math.cos(endRad), y2 = cy + r * Math.sin(endRad);
         const lg = sweep > 180 ? 1 : 0;
         const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${lg} 1 ${x2} ${y2} Z`;
         angle += sweep;
         return <path key={i} d={path} fill={d.color} opacity="0.9" />;
       })}
       <circle cx={cx} cy={cy} r={r * 0.65} fill="white" />
-      <text x={cx} y={cy - 4}  textAnchor="middle" fontSize="18" fontWeight="700" fill="#334155">{total}%</text>
-      <text x={cx} y={cy + 14} textAnchor="middle" fontSize="9"  fill="#94a3b8">Total</text>
+      <text x={cx} y={cy - 4} textAnchor="middle" fontSize="18" fontWeight="700" fill="#334155">100%</text>
+      <text x={cx} y={cy + 14} textAnchor="middle" fontSize="9" fill="#94a3b8">Total</text>
     </svg>
   );
 };
@@ -129,7 +129,7 @@ export const AreaChart = ({ data, height = 160 }) => {
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height }}>
       <defs>
         <linearGradient id="patGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#14A3A0" stopOpacity="0.4" />
+          <stop offset="0%" stopColor="#14A3A0" stopOpacity="0.4" />
           <stop offset="100%" stopColor="#14A3A0" stopOpacity="0.02" />
         </linearGradient>
       </defs>
@@ -160,7 +160,7 @@ export const EncountersLineChart = ({ data, height = 200 }) => {
 
   const maxVal = Math.max(...data.map(d => d.count), 1);
   // round up to a nice ceiling so the top gridline isn't right on the data
-  const ceil  = maxVal <= 3 ? maxVal + 1 : Math.ceil(maxVal * 1.2);
+  const ceil = maxVal <= 3 ? maxVal + 1 : Math.ceil(maxVal * 1.2);
 
   const x = i => pad.l + (i / (data.length - 1)) * cw;
   const y = v => pad.t + ch - (v / ceil) * ch;
@@ -175,7 +175,7 @@ export const EncountersLineChart = ({ data, height = 200 }) => {
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height }}>
       <defs>
         <linearGradient id="encGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#0E6C68" stopOpacity="0.25" />
+          <stop offset="0%" stopColor="#0E6C68" stopOpacity="0.25" />
           <stop offset="100%" stopColor="#0E6C68" stopOpacity="0.01" />
         </linearGradient>
       </defs>

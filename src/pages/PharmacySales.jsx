@@ -528,7 +528,7 @@ const PharmacySales = () => {
           chief_complaint: saleChiefComplaint || null,
           invoice_number: usedInvoice,
           sale_invoice_number: usedInvoice,
-          payment_mode: "Cash",
+          payment_mode: paymentMode,
           subtotal: grandTotal,
           gst_percent: 0,
           gst_amount: 0,
