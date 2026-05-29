@@ -12,6 +12,9 @@ export const PERMISSIONS = {
   VIEW_REPORTS:          "view_reports",
   VIEW_SETTINGS:         "view_settings",
   VIEW_ATTENDANCE:       "view_attendance",
+  VIEW_DIAGNOSTICS:      "view_diagnostics",
+
+  // ── Special dashboard permissions (for data filtering) ─────────────  
 
   // ── Dashboard KPI cards ───────────────────────────
   DASH_ALL_PATIENTS:        "dash_all_patients",
@@ -40,6 +43,7 @@ const ADMIN_SCREENS = [
   PERMISSIONS.VIEW_REPORTS,
   PERMISSIONS.VIEW_SETTINGS,
   PERMISSIONS.VIEW_ATTENDANCE,
+  PERMISSIONS.VIEW_DIAGNOSTICS,
 ];
 
 const ADMIN_DASHBOARD = [

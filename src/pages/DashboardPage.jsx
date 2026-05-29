@@ -82,11 +82,11 @@ const DashboardPage = () => {
       setPaymentModes(
         Object.values(mergedMap).map((m, i) => ({
           ...m,
-          value: total > 0 ? Math.round((m.value / total) * 100) : 0,
+          value: parseFloat(m.value.toFixed(1)),
           color: COLOR_MAP[m.name] || COLOR_MAP[m.name?.toLowerCase()] || FALLBACK_COLORS[i % FALLBACK_COLORS.length],
         }))
       );
-
+      console.log("payment_modes from API:", JSON.stringify(data.payment_modes));
     } catch (e) {
       console.error("Dashboard fetch error:", e);
     } finally {
@@ -284,9 +284,9 @@ const DashboardPage = () => {
                   <Badge status={a.status} />
                 </div>
               ))}
-            </div>       
-          )}            
-        </div>           
+            </div>
+          )}
+        </div>
 
         {/* 2. My Appointments This Month (bar chart) — RIGHT */}
         {(can(PERMISSIONS.DASH_APT_PER_DOCTOR_ALL) || can(PERMISSIONS.DASH_APT_PER_DOCTOR_OWN)) && (
@@ -334,7 +334,7 @@ const DashboardPage = () => {
                 </div>
               ))
             )}
-            
+
           </div>
 
           {/* Payment Modes — RIGHT */}

@@ -29,6 +29,13 @@ const SIDEBAR_SECTIONS = [
     ],
   },
   {
+    section: "Diagnostics",
+    permission: PERMISSIONS.VIEW_DIAGNOSTICS,
+    items: [
+      { id: "diagnostics", label: "Diagnostics", icon: Icons.Diagnostics, permission: PERMISSIONS.VIEW_DIAGNOSTICS },
+    ],
+  },
+  {
     section: "Billing",
     permission: PERMISSIONS.VIEW_BILLING,
     items: [

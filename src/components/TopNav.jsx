@@ -77,9 +77,9 @@ const TopNav = () => {
             <button onClick={() => { setPage("my-profile"); setShowUser(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">
               <Icons.User />My Profile
             </button>
-            <button onClick={() => { setPage("settings"); setShowUser(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-gray-50 rounded-xl transition-colors">
+            {/* <button onClick={() => { setPage("settings"); setShowUser(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-gray-50 rounded-xl transition-colors">
               <Icons.Settings />Settings
-            </button>
+            </button> */}
             <div className="border-t border-gray-100 mt-1 pt-1">
               <button onClick={() => { setShowUser(false); handleLogout(); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-xl transition-colors font-medium">
                 <Icons.Logout />Sign Out

@@ -24,6 +24,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import SelfRegisterPage  from "./pages/SelfRegisterPage";
 import AttendancePage    from "./pages/Attendancepage";   // ← NEW
+import DiagnosticsPage from "./pages/DiagnosticsPage";
 
 function App() {
   const {
@@ -70,7 +71,8 @@ function App() {
     reports:       <ReportsPage />,
     settings:      <SettingsPage />,
     "my-profile":  <EmployeeProfilePage user={user} />,
-    attendance:    <AttendancePage />,               // ← NEW
+    attendance:    <AttendancePage />,   
+    diagnostics:     <DiagnosticsPage />            // ← NEW
   };
 
   // ── Auth flow ──────────────────────────────────────────────────────────────
