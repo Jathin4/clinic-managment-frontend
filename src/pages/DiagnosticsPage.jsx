@@ -1292,8 +1292,8 @@ function DiagnosticReports({ orders }) {
 const TABS = [
   { id: "orders",  label: "Diagnostic Orders" },
   { id: "catalog", label: "Test Catalog"       },
-  { id: "centers", label: "Diagnostic Centers" },
   { id: "reports", label: "Reports"            },
+  { id: "centers", label: "Diagnostic Centers" },
 ];
 
 export default function DiagnosticsPage() {
