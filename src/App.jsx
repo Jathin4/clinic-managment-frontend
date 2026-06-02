@@ -25,6 +25,7 @@ import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import SelfRegisterPage  from "./pages/SelfRegisterPage";
 import AttendancePage    from "./pages/Attendancepage";   // ← NEW
 import DiagnosticsPage from "./pages/DiagnosticsPage";
+import { PERMISSIONS } from "./components/permissions";
 
 function App() {
   const {
@@ -39,14 +40,15 @@ function App() {
 
     const allowedPageIds = new Set([
       "my-profile",
-      "dashboard",
+      ...(can(PERMISSIONS.VIEW_DASHBOARD) ? ["dashboard"] : []),
       ...SIDEBAR_ITEMS
         .filter(item => can(item.permission))
         .map(item => item.id),
     ]);
 
     if (!allowedPageIds.has(page)) {
-      setPage("dashboard");
+      const fallbackPage = SIDEBAR_ITEMS.find(item => allowedPageIds.has(item.id))?.id || "my-profile";
+      setPage(fallbackPage);
     }
   }, [isLoggedIn, user, page, setPage, can]);
 

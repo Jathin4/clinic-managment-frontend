@@ -42,8 +42,8 @@ const InvoiceTypeBadge = ({ invoiceNumber }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const BillingPage = () => {
-  const { showLoading, hideLoading } = useApp();
-  const userObj = { clinic_id: getClinicId() };
+  const { showLoading, hideLoading, user } = useApp();
+  const userObj = { clinic_id: getClinicId(), role: user?.role };
 
   const [bills, setBills]               = useState([]);
   const [patients, setPatients]         = useState([]);
@@ -69,8 +69,36 @@ const BillingPage = () => {
       setIsLoading(true);
       showLoading("Loading bills...", "billing");
       const data = await fetch(`${API}/billsread?clinic_id=${userObj.clinic_id}`).then(r => r.json());
+      let billsData = Array.isArray(data) ? data : [];
+
+      // If Diagnosist, restrict bills to diagnostic-related ones
+      if (userObj.role === "Diagnosist") {
+        try {
+          const ordRes = await fetch(`${API}/api/diagnostic_orders_read?clinic_id=${userObj.clinic_id}`);
+          const orders = await ordRes.json().catch(() => []);
+          const patientIds = new Set(
+            Array.isArray(orders)
+              ? orders.flatMap(o => [o.patient_id, o.v_patient_id].filter(Boolean)).map(id => String(id))
+              : []
+          );
+          const encounterIds = new Set(
+            Array.isArray(orders)
+              ? orders.flatMap(o => [o.encounter_id, o.v_encounter_id].filter(Boolean)).map(id => String(id))
+              : []
+          );
+          billsData = billsData.filter(b =>
+            patientIds.has(String(b.patient_id)) ||
+            encounterIds.has(String(b.encounter_id)) ||
+            String(b.invoice_number || "").startsWith("DCC")
+          );
+        } catch (e) {
+          // fallback: keep no bills
+          billsData = [];
+        }
+      }
+
       const deleted = getDeleted();
-      setBills(Array.isArray(data) ? data.filter(b => !deleted.includes(b.id)) : []);
+      setBills(billsData.filter(b => !deleted.includes(b.id)));
     } catch { showToast("Failed to load bills", "error"); }
     finally { setIsLoading(false); hideLoading(); }
   };

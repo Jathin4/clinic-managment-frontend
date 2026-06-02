@@ -327,12 +327,33 @@ const PatientsPage = () => {
   const fetchPatients = async () => {
     try {
       setIsLoading(true); showLoading("Loading patients...", "patients");
-      const url = can(PERMISSIONS.DASH_OWN_PATIENTS)
-        ? `${API_BASE}/patient_read?clinic_id=${getClinicId()}&doctor_id=${user?.id}`
-        : `${API_BASE}/patient_read?clinic_id=${getClinicId()}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      setPatients(Array.isArray(data) ? data : []);
+
+      // If Diagnosist, restrict patients to those with diagnostic orders
+      if (user?.role === "Diagnosist") {
+        try {
+          const ordRes = await fetch(`${API_BASE}/api/diagnostic_orders_read?clinic_id=${getClinicId()}`);
+          const orders = await ordRes.json().catch(() => []);
+          const patientIds = new Set(
+            Array.isArray(orders)
+              ? orders.flatMap(o => [o.patient_id, o.v_patient_id].filter(Boolean)).map(id => String(id))
+              : []
+          );
+
+          const res = await fetch(`${API_BASE}/patient_read?clinic_id=${getClinicId()}`);
+          const data = await res.json();
+          const all = Array.isArray(data) ? data : [];
+          setPatients(all.filter(p => patientIds.has(String(p.id))));
+        } catch (e) {
+          setPatients([]);
+        }
+      } else {
+        const url = can(PERMISSIONS.DASH_OWN_PATIENTS)
+          ? `${API_BASE}/patient_read?clinic_id=${getClinicId()}&doctor_id=${user?.id}`
+          : `${API_BASE}/patient_read?clinic_id=${getClinicId()}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setPatients(Array.isArray(data) ? data : []);
+      }
     } catch { showToast("Failed to load patients", "error"); }
     finally { setIsLoading(false); hideLoading(); }
   };

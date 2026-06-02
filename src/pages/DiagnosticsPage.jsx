@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import DiagnosticSlip from "./DiagnosticSlip";
 
 // ─────────────────────────────────────────────
 // API Config
@@ -57,16 +58,9 @@ function ToastContainer() {
           padding: "12px 16px", borderRadius: 8, fontSize: 14, fontWeight: 600,
           display: "flex", justifyContent: "space-between", alignItems: "center",
           boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
-          background: t.type === "success" ? "#d1fae5"
-                    : t.type === "error"   ? "#fee2e2"
-                    : "#fef3c7",
-          color:      t.type === "success" ? "#065f46"
-                    : t.type === "error"   ? "#991b1b"
-                    : "#92400e",
-          borderLeft: `4px solid ${
-            t.type === "success" ? "#10b981"
-          : t.type === "error"   ? "#ef4444"
-          : "#f59e0b"}`
+          background: t.type === "success" ? "#d1fae5" : t.type === "error" ? "#fee2e2" : "#fef3c7",
+          color:      t.type === "success" ? "#065f46" : t.type === "error" ? "#991b1b" : "#92400e",
+          borderLeft: `4px solid ${t.type === "success" ? "#10b981" : t.type === "error" ? "#ef4444" : "#f59e0b"}`
         }}>
           <span>
             {t.type === "success" ? "✅ " : t.type === "error" ? "❌ " : "⚠️ "}
@@ -144,13 +138,162 @@ function Modal({ title, onClose, children, maxWidth = 600 }) {
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, children, required = false }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 5 }}>
         {label}
+        {required && <span style={{ color: "#ef4444", marginLeft: 2 }}>*</span>}
       </label>
       {children}
+    </div>
+  );
+}
+
+// Searchable Patient Dropdown - Modern & Consistent with Doctor Field
+function SearchablePatientSelect({ patients, value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const containerRef = useRef(null);
+
+  const selectedPatient = patients.find(p => String(p.id) === String(value));
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredPatients = patients.filter(p => {
+    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase().trim();
+    return fullName.includes(searchTerm.toLowerCase().trim());
+  });
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          ...inputStyle,
+          cursor: "pointer",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          minHeight: "42px",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+        }}
+      >
+        <span style={{ 
+          color: selectedPatient ? "#1e293b" : "#94a3b8",
+          fontWeight: selectedPatient ? "500" : "400"
+        }}>
+          {selectedPatient 
+            ? `${selectedPatient.first_name} ${selectedPatient.last_name}`.trim() 
+            : "Select Patient"}
+        </span>
+        <svg 
+          className="w-4 h-4 text-slate-400 transition-transform" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor" 
+          strokeWidth="2"
+          style={{
+            color: "#64748b",
+            transition: "transform 0.2s",
+            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)"
+          }}
+        >
+          <path 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            d="M19 9l-7 7-7-7" 
+          />
+        </svg>
+      </div>
+
+      {isOpen && (
+        <div style={{
+          position: "absolute",
+          top: "100%",
+          left: 0,
+          right: 0,
+          background: "#fff",
+          border: "1px solid #e2e8f0",
+          borderRadius: 8,
+          marginTop: 4,
+          maxHeight: 260,
+          overflowY: "auto",
+          zIndex: 1000,
+          boxShadow: "0 10px 15px rgba(0,0,0,0.1)"
+        }}>
+          {/* Search Input */}
+          <div style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>
+            <input
+              type="text"
+              placeholder="Search patient name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                border: "1px solid #e2e8f0",
+                borderRadius: 6,
+                outline: "none",
+                fontSize: 14
+              }}
+              autoFocus
+            />
+          </div>
+
+          {/* Patient List */}
+          <div>
+            {filteredPatients.length === 0 ? (
+              <div style={{ padding: "16px", color: "#94a3b8", textAlign: "center", fontSize: 13 }}>
+                No patient found
+              </div>
+            ) : (
+              filteredPatients.slice(0, 50).map(p => (
+                <div
+                  key={p.id}
+                  onClick={() => {
+                    onChange(p.id);
+                    setSearchTerm("");
+                    setIsOpen(false);
+                  }}
+                  style={{
+                    padding: "10px 14px",
+                    cursor: "pointer",
+                    borderBottom: "1px solid #f1f5f9",
+                    background: String(p.id) === String(value) ? "#f0fdf4" : "#fff",
+                    transition: "background 0.1s"
+                  }}
+                  onMouseEnter={(e) => {
+                    if (String(p.id) !== String(value)) e.currentTarget.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (String(p.id) !== String(value)) e.currentTarget.style.background = "#fff";
+                  }}
+                >
+                  <div style={{ fontWeight: 500 }}>
+                    {p.first_name} {p.last_name}
+                  </div>
+                  {p.phone && (
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                      {p.phone}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -166,7 +309,7 @@ function Select({ children, ...props }) {
   return <select style={inputStyle} {...props}>{children}</select>;
 }
 
-function ModalFooter({ onClose, onSave, saving }) {
+function ModalFooter({ onClose, onSave, saving, saveLabel = "Save" }) {
   return (
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
       <button onClick={onClose} style={{
@@ -177,7 +320,7 @@ function ModalFooter({ onClose, onSave, saving }) {
         padding: "8px 22px", border: "none", borderRadius: 7,
         background: saving ? "#93c5fd" : "#0E6C68", color: "#fff",
         fontSize: 14, cursor: saving ? "not-allowed" : "pointer", fontWeight: 600
-      }}>{saving ? "Saving..." : "Save"}</button>
+      }}>{saving ? "Saving..." : saveLabel}</button>
     </div>
   );
 }
@@ -249,9 +392,7 @@ function PrimaryBtn({ children, onClick, disabled }) {
 function LoadingRow({ cols }) {
   return (
     <tr>
-      <td colSpan={cols} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>
-        Loading...
-      </td>
+      <td colSpan={cols} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>Loading...</td>
     </tr>
   );
 }
@@ -259,9 +400,7 @@ function LoadingRow({ cols }) {
 function EmptyRow({ cols, message = "No data found." }) {
   return (
     <tr>
-      <td colSpan={cols} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>
-        {message}
-      </td>
+      <td colSpan={cols} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>{message}</td>
     </tr>
   );
 }
@@ -297,11 +436,7 @@ function StatusUpdateModal({ order, onClose, onUpdated }) {
     try {
       await apiFetch("/api/diagnostic_orders_status_update", {
         method: "PUT",
-        body: JSON.stringify({
-          order_id:  order.v_id,
-          status,
-          clinic_id: getClinicId(),
-        }),
+        body: JSON.stringify({ order_id: order.v_id, status, clinic_id: getClinicId() }),
       });
       toast("Order status updated successfully");
       onUpdated();
@@ -331,6 +466,142 @@ function StatusUpdateModal({ order, onClose, onUpdated }) {
   );
 }
 
+// ─────────────────────────────────────────────
+// Multi-Test Selector Component
+// ─────────────────────────────────────────────
+function MultiTestSelector({ tests, selectedTests, onChange }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [catFilter, setCatFilter] = useState("");
+
+  const filtered = tests.filter(t => {
+    const matchSearch = !searchTerm || (t.v_name || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCat = !catFilter || t.v_category === catFilter;
+    return matchSearch && matchCat && t.v_status === "Active";
+  });
+
+  function toggleTest(test) {
+    const exists = selectedTests.find(s => s.v_id === test.v_id);
+    if (exists) {
+      onChange(selectedTests.filter(s => s.v_id !== test.v_id));
+    } else {
+      onChange([...selectedTests, test]);
+    }
+  }
+
+  function isSelected(testId) {
+    return selectedTests.some(s => s.v_id === testId);
+  }
+
+  const totalAmount = selectedTests.reduce((sum, t) => sum + (parseFloat(t.v_price) || 0), 0);
+
+  return (
+    <div>
+      {/* Search & Filter bar */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <input
+          style={{ ...inputStyle, flex: 1 }}
+          placeholder="Search tests..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+        />
+        <select
+          style={{ ...inputStyle, maxWidth: 150 }}
+          value={catFilter}
+          onChange={e => setCatFilter(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {TEST_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+        </select>
+      </div>
+
+      {/* Test list */}
+      <div style={{
+        border: "1px solid #e2e8f0", borderRadius: 8,
+        maxHeight: 240, overflowY: "auto", background: "#f8fafc"
+      }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: "20px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+            No tests found
+          </div>
+        ) : (
+          filtered.map(t => {
+            const selected = isSelected(t.v_id);
+            return (
+              <div
+                key={t.v_id}
+                onClick={() => toggleTest(t)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #e2e8f0",
+                  background: selected ? "#f0fdf4" : "#fff",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={e => { if (!selected) e.currentTarget.style.background = "#f8fafc"; }}
+                onMouseLeave={e => { if (!selected) e.currentTarget.style.background = "#fff"; }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 4,
+                    border: `2px solid ${selected ? "#0E6C68" : "#cbd5e1"}`,
+                    background: selected ? "#0E6C68" : "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0, transition: "all 0.15s"
+                  }}>
+                    {selected && <span style={{ color: "#fff", fontSize: 11, fontWeight: 800 }}>✓</span>}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>{t.v_name}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                      {t.v_category} {t.v_sample_type ? `· ${t.v_sample_type}` : ""}
+                      {t.v_fasting_required ? " · Fasting required" : ""}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontWeight: 700, color: "#0E6C68", fontSize: 13, flexShrink: 0 }}>
+                  {t.v_price ? `₹${parseFloat(t.v_price).toLocaleString()}` : "—"}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Selected summary */}
+      {selectedTests.length > 0 && (
+        <div style={{
+          marginTop: 10, padding: "10px 14px", background: "#f0fdf4",
+          borderRadius: 8, border: "1px solid #bbf7d0"
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#065f46", marginBottom: 6 }}>
+            Selected Tests ({selectedTests.length})
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {selectedTests.map(t => (
+              <span key={t.v_id} style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                background: "#dcfce7", color: "#166534",
+                padding: "3px 8px", borderRadius: 12, fontSize: 12, fontWeight: 600
+              }}>
+                {t.v_name}
+                <button
+                  onClick={e => { e.stopPropagation(); toggleTest(t); }}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "#166534", fontSize: 14, lineHeight: 1, padding: 0
+                  }}
+                >×</button>
+              </span>
+            ))}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: "#065f46" }}>
+            Total: ₹{totalAmount.toLocaleString()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // Tab 1: Diagnostic Orders
 // ═════════════════════════════════════════════════════════════════════════════
@@ -349,13 +620,16 @@ function DiagnosticOrders({ patients, doctors, tests, centers, onOrdersChange })
 
   const emptyForm = {
     patient_type: "DCC",
-    patient_id: "", doctor_id: "", center_id: "", test_id: "",
+    patient_id: "", doctor_id: "", center_id: "",
     // DCN fields
     walkin_name: "", walkin_phone: "", walkin_age: "", walkin_gender: "Male",
     priority: "Normal", collection_type: "At Clinic",
-    payment_status: "Pending", payment_mode: "Cash", amount: "", notes: ""
+    payment_status: "Pending", payment_mode: "Cash",
+    amount: "", notes: ""
   };
   const [form, setForm] = useState(emptyForm);
+  // Multi-test selection
+  const [selectedTests, setSelectedTests] = useState([]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -374,13 +648,12 @@ function DiagnosticOrders({ patients, doctors, tests, centers, onOrdersChange })
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  // Fix: case-insensitive center filter, date filter using order_date directly
   const filtered = orders.filter(o => {
     const s = search.toLowerCase();
     const matchSearch = !s ||
-      (o.v_patient_name  || "").toLowerCase().includes(s) ||
-      (o.v_invoice_number|| "").toLowerCase().includes(s) ||
-      (o.v_doctor_name   || "").toLowerCase().includes(s);
+      (o.v_patient_name   || "").toLowerCase().includes(s) ||
+      (o.v_invoice_number || "").toLowerCase().includes(s) ||
+      (o.v_doctor_name    || "").toLowerCase().includes(s);
     const matchStatus = !statusFilter || o.v_status === statusFilter;
     const matchCenter = !centerFilter || (o.v_center_name || "").toLowerCase() === centerFilter.toLowerCase();
     const matchType   = !typeFilter   || o.v_patient_type === typeFilter;
@@ -398,10 +671,18 @@ function DiagnosticOrders({ patients, doctors, tests, centers, onOrdersChange })
     return `Doctor ${d.id}`;
   }
 
+  // Auto-calculate total from selected tests when tests change
+  useEffect(() => {
+    if (selectedTests.length > 0) {
+      const total = selectedTests.reduce((sum, t) => sum + (parseFloat(t.v_price) || 0), 0);
+      setForm(f => ({ ...f, amount: total.toString() }));
+    }
+  }, [selectedTests]);
+
   async function handleSave() {
     // Validation
     if (!form.center_id) { toast("Diagnostic Center is required", "error"); return; }
-    if (!form.test_id)   { toast("Test is required", "error"); return; }
+    if (selectedTests.length === 0) { toast("Please select at least one test", "error"); return; }
     if (form.patient_type === "DCC" && !form.patient_id) {
       toast("Patient is required for clinic orders", "error"); return;
     }
@@ -415,32 +696,56 @@ function DiagnosticOrders({ patients, doctors, tests, centers, onOrdersChange })
 
     setSaving(true);
     try {
-      const res = await apiFetch("/api/diagnostic_orders_create_update", {
-        method: "POST",
-        body: JSON.stringify({
-          order_id:        0,
-          clinic_id:       getClinicId(),
-          patient_type:    form.patient_type,
-          patient_id:      form.patient_type === "DCC" ? parseInt(form.patient_id) : 0,
-          doctor_id:       parseInt(form.doctor_id) || 0,
-          center_id:       parseInt(form.center_id),
-          test_id:         parseInt(form.test_id),
-          walkin_name:     form.patient_type === "DCN" ? form.walkin_name  : null,
-          walkin_phone:    form.patient_type === "DCN" ? form.walkin_phone : null,
-          walkin_age:      form.patient_type === "DCN" ? parseInt(form.walkin_age) || null : null,
-          walkin_gender:   form.patient_type === "DCN" ? form.walkin_gender : null,
-          priority:        form.priority,
-          collection_type: form.collection_type,
-          payment_status:  form.payment_status,
-          payment_mode:    form.payment_mode,
-          amount:          parseFloat(form.amount) || 0,
-          notes:           form.notes,
-        }),
-      });
-      toast(`Order created — Invoice: ${res.invoice_number}`);
+      // Create one order per test, sharing the same session
+      // Backend handles invoice grouping via batch endpoint
+      const results = [];
+      for (const test of selectedTests) {
+        const perTestAmount = selectedTests.length > 1
+          ? (parseFloat(form.amount) || 0) / selectedTests.length
+          : parseFloat(form.amount) || 0;
+
+        const selectedPatient = patients.find(p => String(p.id) === String(form.patient_id));
+const resolvedPatientName = form.patient_type === "DCC"
+  ? `${selectedPatient?.first_name || ""} ${selectedPatient?.last_name || ""}`.trim()
+  : form.walkin_name.trim();
+
+const res = await apiFetch("/api/diagnostic_orders_create_update", {
+  method: "POST",
+  body: JSON.stringify({
+    order_id:        0,
+    clinic_id:       getClinicId(),
+    patient_type:    form.patient_type,
+    patient_id:      form.patient_type === "DCC" ? (parseInt(form.patient_id) || 0) : 0,
+    patient_name:    resolvedPatientName,   // ✅ send resolved name
+    doctor_id:       parseInt(form.doctor_id) || 0,
+    center_id:       parseInt(form.center_id),
+    test_id:         parseInt(test.v_id),
+    walkin_name:     form.patient_type === "DCN" ? form.walkin_name  : null,
+    walkin_phone:    form.patient_type === "DCN" ? form.walkin_phone : null,
+    walkin_age:      form.patient_type === "DCN" ? parseInt(form.walkin_age) || null : null,
+    walkin_gender:   form.patient_type === "DCN" ? form.walkin_gender : null,
+    priority:        form.priority,
+    collection_type: form.collection_type,
+    payment_status:  form.payment_status,
+    payment_mode:    form.payment_mode,
+    amount:          perTestAmount,
+    notes:           form.notes,
+  }),
+});
+
+        results.push(res);
+      }
+
+      if (selectedTests.length === 1) {
+        toast(`Order created — Invoice: ${results[0].invoice_number}`);
+      } else {
+        toast(`${selectedTests.length} orders created successfully`);
+      }
+
       await fetchOrders();
       setShowModal(false);
       setForm(emptyForm);
+      setSelectedTests([]);
     } catch (e) {
       toast(e.message, "error");
     } finally {
@@ -462,18 +767,21 @@ function DiagnosticOrders({ patients, doctors, tests, centers, onOrdersChange })
     }
   }
 
-  // Fix: revenue label — no ₹ prefix in value since label already shows currency
-  const totalRevenue = orders.reduce((s, o) => s + (parseFloat(o.v_amount) || 0), 0);
+  // Use catalog price for revenue; fall back to v_amount if test not in catalog
+  const totalRevenue = orders.reduce((s, o) => {
+    const ct = tests.find(t => (t.v_name || "").toLowerCase() === (o.v_test_name || "").toLowerCase());
+    return s + parseFloat(ct?.v_price ?? o.v_amount ?? 0);
+  }, 0);
 
   return (
     <div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 24 }}>
-        <SummaryCard label="Total Orders"    value={orders.length}                                                                        color="#0E6C68" />
-        <SummaryCard label="Clinic (DCC)"    value={orders.filter(o => o.v_patient_type === "DCC").length}                                color="#3730a3" />
-        <SummaryCard label="Walk-in (DCN)"   value={orders.filter(o => o.v_patient_type === "DCN").length}                                color="#9d174d" />
-        <SummaryCard label="Processing"      value={orders.filter(o => o.v_status === "Processing").length}                               color="#8b5cf6" />
-        <SummaryCard label="Reports Ready"   value={orders.filter(o => ["Report Uploaded","Completed"].includes(o.v_status)).length}      color="#10b981" />
-        <SummaryCard label="Revenue"         value={`₹${totalRevenue.toLocaleString()}`}                                                  color="#0ea5e9" />
+        <SummaryCard label="Total Orders"  value={orders.length}                                                                     color="#0E6C68" />
+        <SummaryCard label="Clinic (DCC)"  value={orders.filter(o => o.v_patient_type === "DCC").length}                             color="#3730a3" />
+        <SummaryCard label="Walk-in (DCN)" value={orders.filter(o => o.v_patient_type === "DCN").length}                             color="#9d174d" />
+        <SummaryCard label="Processing"    value={orders.filter(o => o.v_status === "Processing").length}                            color="#8b5cf6" />
+        <SummaryCard label="Reports Ready" value={orders.filter(o => ["Report Uploaded","Completed"].includes(o.v_status)).length}   color="#10b981" />
+        <SummaryCard label="Revenue"       value={`₹${totalRevenue.toLocaleString()}`}                                               color="#0ea5e9" />
       </div>
 
       {error && <ErrorBanner message={error} onRetry={fetchOrders} />}
@@ -501,162 +809,291 @@ function DiagnosticOrders({ patients, doctors, tests, centers, onOrdersChange })
           </Select>
           <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ ...inputStyle, maxWidth: 160 }} />
         </div>
-        <PrimaryBtn onClick={() => { setForm(emptyForm); setShowModal(true); }}>+ New Order</PrimaryBtn>
+        <PrimaryBtn onClick={() => { setForm(emptyForm); setSelectedTests([]); setShowModal(true); }}>
+          + New Order
+        </PrimaryBtn>
       </div>
 
       <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.07)" }}>
-        <Table headers={["Invoice", "Type", "Patient", "Doctor", "Center", "Test", "Amount", "Status", "Date", "Actions"]}>
-          {loading ? <LoadingRow cols={10} /> :
-           filtered.length === 0 ? <EmptyRow cols={10} message="No orders found." /> :
-           filtered.map(o => (
-            <tr key={o.v_id}
-              onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
-              onMouseLeave={e => e.currentTarget.style.background = ""}>
-              <Td><span style={{ fontWeight: 700, color: "#0E6C68", fontSize: 12 }}>{o.v_invoice_number}</span></Td>
-              <Td><StatusBadge status={o.v_patient_type} /></Td>
-              <Td>{o.v_patient_name}</Td>
-              <Td style={{ color: "#64748b" }}>{o.v_doctor_name || "—"}</Td>
-              <Td>{o.v_center_name}</Td>
-              <Td style={{ color: "#64748b" }}>{o.v_test_name}</Td>
-              <Td><span style={{ fontWeight: 700 }}>₹{parseFloat(o.v_amount || 0).toLocaleString()}</span></Td>
-              <Td><StatusBadge status={o.v_status} /></Td>
-              <Td style={{ color: "#94a3b8" }}>{(o.v_order_date || "").split("T")[0]}</Td>
-              <Td>
-                <ActionBtn label="Status" color="#f59e0b" onClick={() => setStatusModal(o)} />
-                <ActionBtn label="Delete" color="#ef4444" onClick={() => handleDelete(o.v_id)} />
-              </Td>
-            </tr>
-          ))}
+        <Table headers={["Invoice", "Type", "Patient", "Doctor", "Center", "Test", "Amount", "Status", "Date", "Actions", "Print"]}>
+          {loading ? <LoadingRow cols={11} /> :
+           filtered.length === 0 ? <EmptyRow cols={11} message="No orders found." /> :
+           filtered.map(o => {
+            // ── Resolve correct test price from catalog ──────────────────
+            // v_amount on the order may be split/rounded; use the catalog price directly
+            const catalogTest = tests.find(t =>
+              (t.v_name || "").toLowerCase() === (o.v_test_name || "").toLowerCase()
+            );
+            const testPrice = parseFloat(catalogTest?.v_price ?? o.v_amount ?? 0);
+
+            // ── Group all orders for same patient + same date + same center ──
+            // This lets the print slip show ALL tests in one receipt
+            const sameVisitOrders = orders.filter(x =>
+              x.v_patient_id   === o.v_patient_id &&
+              x.v_center_id    === o.v_center_id  &&
+              (x.v_order_date  || "").split("T")[0] === (o.v_order_date || "").split("T")[0]
+            );
+
+            const groupedTests = sameVisitOrders.map(x => {
+              const ct = tests.find(t =>
+                (t.v_name || "").toLowerCase() === (x.v_test_name || "").toLowerCase()
+              );
+              return {
+                test_name:   x.v_test_name,
+                category:    ct?.v_category    || x.v_category    || "",
+                sample_type: ct?.v_sample_type || x.v_sample_type || "",
+                report_time: ct?.v_report_time || x.v_report_time || "",
+                amount:      parseFloat(ct?.v_price ?? x.v_amount ?? 0),
+              };
+            });
+
+            // Use earliest invoice number of the group as the slip invoice
+            const groupInvoice = sameVisitOrders
+              .map(x => x.v_invoice_number)
+              .sort()[0] || o.v_invoice_number;
+
+            return (
+              <tr key={o.v_id}
+                onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+                onMouseLeave={e => e.currentTarget.style.background = ""}>
+                <Td><span style={{ fontWeight: 700, color: "#0E6C68", fontSize: 12 }}>{o.v_invoice_number}</span></Td>
+                <Td><StatusBadge status={o.v_patient_type} /></Td>
+                <Td>
+  {o.v_patient_name && o.v_patient_name.trim()
+    ? o.v_patient_name
+    : <span style={{ color: "#94a3b8", fontStyle: "italic" }}>Unknown</span>
+  }
+</Td>
+                <Td style={{ color: "#64748b" }}>{o.v_doctor_name || "—"}</Td>
+                <Td>{o.v_center_name}</Td>
+                <Td style={{ color: "#64748b" }}>{o.v_test_name}</Td>
+                <Td><span style={{ fontWeight: 700 }}>₹{testPrice.toLocaleString()}</span></Td>
+                <Td><StatusBadge status={o.v_status} /></Td>
+                <Td style={{ color: "#94a3b8" }}>{(o.v_order_date || "").split("T")[0]}</Td>
+                <Td>
+                  <ActionBtn label="Status" color="#f59e0b" onClick={() => setStatusModal(o)} />
+                  <ActionBtn label="Delete" color="#ef4444" onClick={() => handleDelete(o.v_id)} />
+                </Td>
+                <Td>
+                  <DiagnosticSlip order={{
+                    invoice_number:  groupInvoice,
+                    center_name:     o.v_center_name,
+                    patient_name:    o.v_patient_name,
+                    patient_type:    o.v_patient_type,
+                    doctor_name:     o.v_doctor_name,
+                    order_date:      o.v_order_date,
+                    priority:        o.v_priority,
+                    collection_type: o.v_collection_type,
+                    payment_mode:    o.v_payment_mode,
+                    payment_status:  o.v_payment_status,
+                    notes:           o.v_notes,
+                    tests:           groupedTests,
+                  }} />
+                </Td>
+              </tr>
+            );
+          })}
         </Table>
       </div>
 
-      {/* New Order Modal */}
-      {showModal && (
-        <Modal title="New Diagnostic Order" onClose={() => setShowModal(false)} maxWidth={700}>
-          {/* Patient Type Toggle */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-            {["DCC", "DCN"].map(type => (
-              <button key={type} onClick={() => setForm({ ...form, patient_type: type })} style={{
-                flex: 1, padding: "10px", borderRadius: 8, border: "2px solid",
-                borderColor: form.patient_type === type ? "#0E6C68" : "#e2e8f0",
-                background: form.patient_type === type ? "#0E6C68" : "#fff",
-                color: form.patient_type === type ? "#fff" : "#64748b",
-                fontWeight: 700, cursor: "pointer", fontSize: 14,
-              }}>
-                {type === "DCC" ? "🏥 DCC — Clinic Patient" : "🚶 DCN — Walk-in Patient"}
-              </button>
+      {/* ── New Order Modal ── */}
+{showModal && (
+  <Modal title="New Diagnostic Order" onClose={() => { setShowModal(false); setSelectedTests([]); }} maxWidth={780}>
+    
+    {/* Patient Type Toggle */}
+    <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+      {["DCC", "DCN"].map(type => (
+        <button 
+          key={type} 
+          onClick={() => setForm({ ...form, patient_type: type })}
+          style={{
+            flex: 1, padding: "10px", borderRadius: 8, border: "2px solid",
+            borderColor: form.patient_type === type ? "#0E6C68" : "#e2e8f0",
+            background: form.patient_type === type ? "#0E6C68" : "#fff",
+            color: form.patient_type === type ? "#fff" : "#64748b",
+            fontWeight: 700, cursor: "pointer", fontSize: 14,
+          }}
+        >
+          {type === "DCC" ? "🏥 DCC — Clinic Patient" : "🚶 DCN — Walk-in Patient"}
+        </button>
+      ))}
+    </div>
+
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px 12px" }}>
+  
+  {/* LEFT SIDE - DCN Fields (Compact 6 column layout) */}
+  {form.patient_type === "DCN" ? (
+    <>
+      {/* Row 1 */}
+      <div style={{ gridColumn: "span 3" }}>
+        <Field label="Patient Name" required>
+          <Input value={form.walkin_name} onChange={e => setForm({ ...form, walkin_name: e.target.value })} placeholder="Full name" />
+        </Field>
+      </div>
+      <div style={{ gridColumn: "span 3" }}>
+        <Field label="Phone " required>
+          <Input value={form.walkin_phone} onChange={e => setForm({ ...form, walkin_phone: e.target.value })} placeholder="10-digit mobile" maxLength={10} />
+        </Field>
+      </div>
+
+      {/* Row 2 */}
+      <div style={{ gridColumn: "span 3" }}>
+        <Field label="Age">
+          <Input type="number" min={0} max={120} value={form.walkin_age} onChange={e => setForm({ ...form, walkin_age: e.target.value })} placeholder="Age" />
+        </Field>
+      </div>
+      <div style={{ gridColumn: "span 3" }}>
+        <Field label="Gender">
+          <Select value={form.walkin_gender} onChange={e => setForm({ ...form, walkin_gender: e.target.value })}>
+            {GENDERS.map(g => <option key={g}>{g}</option>)}
+          </Select>
+        </Field>
+      </div>
+      {/* <div style={{ gridColumn: "span 3" }}></div> */}
+
+      {/* Row 3 - Doctor + Center */}
+      <div style={{ gridColumn: "span 3" }}>
+        <Field label="Doctor">
+          <Select value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })}>
+            <option value="">Select Doctor (optional)</option>
+            {doctors.map(d => (
+              <option key={d.id} value={d.id}>{getDoctorName(d)}</option>
             ))}
-          </div>
+          </Select>
+        </Field>
+      </div>
+      <div style={{ gridColumn: "span 3" }}>
+        <Field label="Diagnostic Center " required>
+          <Select value={form.center_id} onChange={e => setForm({ ...form, center_id: e.target.value })}>
+            <option value="">Select Center</option>
+            {centers.map(c => <option key={c.v_id} value={c.v_id}>{c.v_name}</option>)}
+          </Select>
+        </Field>
+      </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-            <div>
-              {/* DCC: Patient select */}
-              {form.patient_type === "DCC" && (
-                <Field label="Patient *">
-                  <Select value={form.patient_id} onChange={e => setForm({ ...form, patient_id: e.target.value })}>
-                    <option value="">Select Patient</option>
-                    {patients.map(p => (
-                      <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
-                    ))}
-                  </Select>
-                </Field>
-              )}
+      {/* Row 4 - Priority + Sample Collection */}
+      <div style={{ gridColumn: "span 3" }}>
+        <Field label="Priority">
+          <Select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+            <option>Normal</option>
+            <option>Urgent</option>
+          </Select>
+        </Field>
+      </div>
+      <div style={{ gridColumn: "span 3" }}>
+        <Field label="Sample Collection">
+          <Select value={form.collection_type} onChange={e => setForm({ ...form, collection_type: e.target.value })}>
+            <option>At Clinic</option>
+            <option>Home Visit</option>
+          </Select>
+        </Field>
+      </div>
+    </>
+  ) : (
+    /* DCC Layout - Keep as 2 column for better readability */
+    <div style={{ gridColumn: "span 6" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        <Field label="Patient " required>
+  <SearchablePatientSelect 
+    patients={patients} 
+    value={form.patient_id} 
+    onChange={(patientId) => setForm({ ...form, patient_id: patientId })}
+  />
+</Field>
 
-              {/* DCN: Walk-in fields */}
-              {form.patient_type === "DCN" && (<>
-                <Field label="Patient Name *">
-                  <Input value={form.walkin_name} onChange={e => setForm({ ...form, walkin_name: e.target.value })} placeholder="Full name" />
-                </Field>
-                <Field label="Phone *">
-                  <Input value={form.walkin_phone} onChange={e => setForm({ ...form, walkin_phone: e.target.value })} placeholder="10-digit mobile" maxLength={10} />
-                </Field>
-                <Field label="Age">
-                  <Input type="number" min={0} max={120} value={form.walkin_age} onChange={e => setForm({ ...form, walkin_age: e.target.value })} placeholder="Age" />
-                </Field>
-                <Field label="Gender">
-                  <Select value={form.walkin_gender} onChange={e => setForm({ ...form, walkin_gender: e.target.value })}>
-                    {GENDERS.map(g => <option key={g}>{g}</option>)}
-                  </Select>
-                </Field>
-              </>)}
+        <Field label="Doctor">
+          <Select value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })}>
+            <option value="">Select Doctor (optional)</option>
+            {doctors.map(d => <option key={d.id} value={d.id}>{getDoctorName(d)}</option>)}
+          </Select>
+        </Field>
 
-              <Field label="Doctor">
-                <Select value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })}>
-                  <option value="">Select Doctor (optional)</option>
-                  {doctors.map(d => (
-                    <option key={d.id} value={d.id}>{getDoctorName(d)}</option>
-                  ))}
-                </Select>
-              </Field>
+        <Field label="Diagnostic Center " required>
+          <Select value={form.center_id} onChange={e => setForm({ ...form, center_id: e.target.value })}>
+            <option value="">Select Center</option>
+            {centers.map(c => <option key={c.v_id} value={c.v_id}>{c.v_name}</option>)}
+          </Select>
+        </Field>
 
-              <Field label="Diagnostic Center *">
-                <Select value={form.center_id} onChange={e => setForm({ ...form, center_id: e.target.value })}>
-                  <option value="">Select Center</option>
-                  {centers.map(c => <option key={c.v_id} value={c.v_id}>{c.v_name}</option>)}
-                </Select>
-              </Field>
+        <Field label="Priority">
+          <Select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+            <option>Normal</option>
+            <option>Urgent</option>
+          </Select>
+        </Field>
 
-              <Field label="Test *">
-                <Select value={form.test_id} onChange={e => setForm({ ...form, test_id: e.target.value })}>
-                  <option value="">Select Test</option>
-                  {tests.map(t => (
-                    <option key={t.v_id} value={t.v_id}>{t.v_name} {t.v_price ? `— ₹${t.v_price}` : ""}</option>
-                  ))}
-                </Select>
-              </Field>
+        <Field label="Sample Collection">
+          <Select value={form.collection_type} onChange={e => setForm({ ...form, collection_type: e.target.value })}>
+            <option>At Clinic</option>
+            <option>Home Visit</option>
+          </Select>
+        </Field>
+      </div>
+    </div>
+  )}
 
-              <Field label="Priority">
-                <Select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
-                  <option>Normal</option>
-                  <option>Urgent</option>
-                </Select>
-              </Field>
-            </div>
+  {/* RIGHT COLUMN - Payment Fields (Common) */}
+  <div style={{ gridColumn: "span 6" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px 12px" }}>
+      <div style={{ gridColumn: "span 2" }}>
+        <Field label="Payment Status">
+          <Select value={form.payment_status} onChange={e => setForm({ ...form, payment_status: e.target.value })}>
+            <option>Pending</option>
+            <option>Paid</option>
+            <option>Partial</option>
+          </Select>
+        </Field>
+      </div>
+      <div style={{ gridColumn: "span 2" }}>
+        <Field label="Payment Mode">
+          <Select value={form.payment_mode} onChange={e => setForm({ ...form, payment_mode: e.target.value })}>
+            <option>Cash</option>
+            <option>Card</option>
+            <option>UPI</option>
+            <option>Insurance</option>
+          </Select>
+        </Field>
+      </div>
+      <div style={{ gridColumn: "span 2" }}>
+        <Field label="Total Amount (₹)">
+          <Input type="number" min={0} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
+        </Field>
+      </div>
+    </div>
+  </div>
 
-            <div>
-              <Field label="Sample Collection">
-                <Select value={form.collection_type} onChange={e => setForm({ ...form, collection_type: e.target.value })}>
-                  <option>At Clinic</option>
-                  <option>Home Visit</option>
-                </Select>
-              </Field>
-              <Field label="Payment Status">
-                <Select value={form.payment_status} onChange={e => setForm({ ...form, payment_status: e.target.value })}>
-                  <option>Pending</option>
-                  <option>Paid</option>
-                  <option>Partial</option>
-                </Select>
-              </Field>
-              <Field label="Payment Mode">
-                <Select value={form.payment_mode} onChange={e => setForm({ ...form, payment_mode: e.target.value })}>
-                  <option>Cash</option>
-                  <option>Card</option>
-                  <option>UPI</option>
-                  <option>Insurance</option>
-                </Select>
-              </Field>
-              <Field label="Total Amount (₹)">
-                <Input
-                  type="number" min={0}
-                  value={form.amount}
-                  onChange={e => setForm({ ...form, amount: e.target.value })}
-                  placeholder="0.00"
-                />
-              </Field>
-              <Field label="Notes">
-                <textarea
-                  value={form.notes}
-                  onChange={e => setForm({ ...form, notes: e.target.value })}
-                  rows={4}
-                  style={{ ...inputStyle, resize: "vertical" }}
-                  placeholder="Any instructions..."
-                />
-              </Field>
-            </div>
-          </div>
-          <ModalFooter onClose={() => setShowModal(false)} onSave={handleSave} saving={saving} />
-        </Modal>
-      )}
+  {/* Notes - Full Width, spans 2 rows */}
+  <div style={{ gridColumn: "span 6" }}>
+    <Field label="Notes">
+      <textarea
+        value={form.notes}
+        onChange={e => setForm({ ...form, notes: e.target.value })}
+        rows={3}
+        style={{ ...inputStyle, resize: "vertical", width: "100%" }}
+        placeholder="Any instructions..."
+      />
+    </Field>
+  </div>
+
+</div>
+
+
+    {/* Tests Section - Full Width */}
+    <div style={{ marginTop: 20 }}>
+      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 8 }}>
+        Select Tests<span style={{ color: "#ef4444" }}>*</span>
+      </label>
+      <MultiTestSelector tests={tests} selectedTests={selectedTests} onChange={setSelectedTests} />
+    </div>
+
+    <ModalFooter
+      onClose={() => { setShowModal(false); setSelectedTests([]); }}
+      onSave={handleSave}
+      saving={saving}
+      saveLabel={selectedTests.length > 1 ? `Create ${selectedTests.length} Orders` : "Save"}
+    />
+  </Modal>
+)}
 
       {statusModal && (
         <StatusUpdateModal
@@ -815,10 +1252,7 @@ function TestCatalog({ onTestsChange }) {
       </div>
 
       {showModal && (
-        <Modal
-          title={editTest ? "Edit Test" : "Add New Test"}
-          onClose={() => { setShowModal(false); setEditTest(null); }}
-        >
+        <Modal title={editTest ? "Edit Test" : "Add New Test"} onClose={() => { setShowModal(false); setEditTest(null); }}>
           <Field label="Test Name *">
             <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Complete Blood Count" />
           </Field>
@@ -873,7 +1307,7 @@ function TestCatalog({ onTestsChange }) {
 function DiagnosticCenters({ centers, fetchCenters, loading: centersLoading }) {
   const [showModal, setShowModal] = useState(false);
   const [editCenter, setEditCenter] = useState(null);
-  const [saving, setSaving]         = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const emptyForm = {
     name: "", contact_person: "", phone: "", email: "",
@@ -966,7 +1400,6 @@ function DiagnosticCenters({ centers, fetchCenters, loading: centersLoading }) {
         <PrimaryBtn onClick={openAdd}>+ Add Diagnostic Center</PrimaryBtn>
       </div>
 
-      {/* Fix: loading state for centers */}
       {centersLoading ? (
         <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Loading centers...</div>
       ) : centers.length === 0 ? (
@@ -1021,7 +1454,6 @@ function DiagnosticCenters({ centers, fetchCenters, loading: centersLoading }) {
               <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} maxLength={15} />
             </Field>
             <Field label="Email">
-              {/* Fix: type="email" for browser validation */}
               <Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
             </Field>
             <Field label="GST Number">
@@ -1086,7 +1518,6 @@ function DiagnosticReports({ orders }) {
 
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
-  // Fix: populate patient_id and center_id from orders correctly
   function handleOrderChange(orderId) {
     const order = orders.find(o => String(o.v_id) === String(orderId));
     setForm(f => ({
@@ -1101,13 +1532,11 @@ function DiagnosticReports({ orders }) {
   function handleFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
-    // Fix: PDF only validation
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       toast("Only PDF files are allowed", "error");
       fileRef.current.value = "";
       return;
     }
-    // Fix: 10MB size limit
     if (file.size > 10 * 1024 * 1024) {
       toast("File size must be less than 10MB", "error");
       fileRef.current.value = "";
@@ -1117,23 +1546,21 @@ function DiagnosticReports({ orders }) {
     setFileName(file.name);
   }
 
-  // Fix: filter cancelled orders from dropdown
   const activeOrders = orders.filter(o => o.v_status !== "Cancelled");
 
   const filtered = reports.filter(r =>
     !search ||
-    (r.v_patient_name  || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.v_invoice_number|| "").toLowerCase().includes(search.toLowerCase())
+    (r.v_patient_name   || "").toLowerCase().includes(search.toLowerCase()) ||
+    (r.v_invoice_number || "").toLowerCase().includes(search.toLowerCase())
   );
 
   async function handleSave() {
-    if (!form.order_id)   { toast("Order is required", "error"); return; }
-    if (!form.test_name)  { toast("Test name is required", "error"); return; }
-    if (!form.file)       { toast("Please select a PDF file", "error"); return; }
+    if (!form.order_id)  { toast("Order is required", "error"); return; }
+    if (!form.test_name) { toast("Test name is required", "error"); return; }
+    if (!form.file)      { toast("Please select a PDF file", "error"); return; }
 
     setSaving(true);
     try {
-      // Fix: use FormData for file upload, not JSON
       const fd = new FormData();
       fd.append("order_id",      form.order_id);
       fd.append("patient_id",    form.patient_id || 0);
@@ -1144,10 +1571,7 @@ function DiagnosticReports({ orders }) {
       fd.append("report_status", form.report_status);
       fd.append("file",          form.file);
 
-      await apiFetch("/api/diagnostic_reports_upload", {
-        method: "POST",
-        body:   fd,
-      });
+      await apiFetch("/api/diagnostic_reports_upload", { method: "POST", body: fd });
 
       toast("Report uploaded successfully");
       await fetchReports();
@@ -1222,10 +1646,9 @@ function DiagnosticReports({ orders }) {
           <Field label="Order *">
             <Select value={form.order_id} onChange={e => handleOrderChange(e.target.value)}>
               <option value="">Select Order</option>
-              {/* Fix: only non-cancelled orders */}
               {activeOrders.map(o => (
                 <option key={o.v_id} value={o.v_id}>
-                  {o.v_invoice_number} — {o.v_patient_name} ({o.v_patient_type})
+                  {o.v_invoice_number} — {o.v_patient_name} · {o.v_test_name} ({o.v_patient_type})
                 </option>
               ))}
             </Select>
@@ -1239,8 +1662,6 @@ function DiagnosticReports({ orders }) {
               <option>Final</option>
             </Select>
           </Field>
-
-          {/* Fix: PDF file upload instead of URL text field */}
           <Field label="Report File (PDF only, max 10MB) *">
             <div style={{
               border: "2px dashed #e2e8f0", borderRadius: 8, padding: "16px",
@@ -1258,15 +1679,11 @@ function DiagnosticReports({ orders }) {
                 </div>
               )}
               <input
-                ref={fileRef}
-                type="file"
-                accept=".pdf,application/pdf"
-                style={{ display: "none" }}
-                onChange={handleFileChange}
+                ref={fileRef} type="file" accept=".pdf,application/pdf"
+                style={{ display: "none" }} onChange={handleFileChange}
               />
             </div>
           </Field>
-
           <Field label="Remarks">
             <textarea
               value={form.remarks}
@@ -1302,7 +1719,7 @@ export default function DiagnosticsPage() {
   const [doctors,   setDoctors]     = useState([]);
   const [centers,   setCenters]     = useState([]);
   const [tests,     setTests]       = useState([]);
-  const [orders,    setOrders]      = useState([]);  // Fix: shared orders for Reports tab
+  const [orders,    setOrders]      = useState([]);
   const [centersLoading, setCentersLoading] = useState(true);
 
   const fetchCenters = useCallback(async () => {
@@ -1319,19 +1736,15 @@ export default function DiagnosticsPage() {
 
   useEffect(() => {
     fetchCenters();
-
     apiFetch(`/patient_read?clinic_id=${getClinicId()}`)
       .then(data => setPatients(Array.isArray(data) ? data : []))
       .catch(() => {});
-
     apiFetch(`/doctorsread`)
       .then(data => setDoctors(Array.isArray(data) ? data : []))
       .catch(() => {});
-
     apiFetch(`/api/diagnostic_tests_read?clinic_id=${getClinicId()}`)
       .then(data => setTests(Array.isArray(data) ? data : []))
       .catch(() => {});
-
   }, [fetchCenters]);
 
   return (
@@ -1372,28 +1785,16 @@ export default function DiagnosticsPage() {
         <div>
           {activeTab === "orders" && (
             <DiagnosticOrders
-              patients={patients}
-              doctors={doctors}
-              tests={tests}
-              centers={centers}
-              onOrdersChange={setOrders}   // Fix: keeps parent orders in sync
+              patients={patients} doctors={doctors}
+              tests={tests} centers={centers}
+              onOrdersChange={setOrders}
             />
           )}
-          {activeTab === "catalog" && (
-            <TestCatalog onTestsChange={setTests} />
-          )}
+          {activeTab === "catalog" && <TestCatalog onTestsChange={setTests} />}
           {activeTab === "centers" && (
-            <DiagnosticCenters
-              centers={centers}
-              fetchCenters={fetchCenters}
-              loading={centersLoading}
-            />
+            <DiagnosticCenters centers={centers} fetchCenters={fetchCenters} loading={centersLoading} />
           )}
-          {activeTab === "reports" && (
-            <DiagnosticReports
-              orders={orders}   // Fix: always up-to-date from parent
-            />
-          )}
+          {activeTab === "reports" && <DiagnosticReports orders={orders} />}
         </div>
       </div>
     </>
