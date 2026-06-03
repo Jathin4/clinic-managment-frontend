@@ -406,8 +406,9 @@ const PharmacySales = () => {
     setIsSaleSubmitting(true);
 
     const usedInvoice = saleInvoiceNumber;
-    let patientName = resolvedPatientName;
-    let resolvedPatientId = salePatientType === "encounter" ? Number(salePatientId) : undefined;
+const actualSaleDate = todayStr();   // ← add this line
+let patientName = resolvedPatientName;
+let resolvedPatientId = salePatientType === "encounter" ? Number(salePatientId) : undefined;
 
     // Create patient record for external / walk-in customers
     if (salePatientType === "other" && saleOtherName.trim()) {
@@ -440,7 +441,7 @@ const PharmacySales = () => {
           sale_id: 0,
           clinic_id: userObj.clinic_id,
           sale_invoice_no: usedInvoice,
-          sale_date: saleDate,
+          sale_date: actualSaleDate,
           patient_id: resolvedPatientId,
           patient_name: patientName,
           chief_complaint: saleChiefComplaint || null,
@@ -506,7 +507,7 @@ const PharmacySales = () => {
             purchase_price: parseFloat(s.purchase_price || 0),
             sale_price: parseFloat(s.salePrice || 0),
             remarks: "Pharmacy Sale",
-            transaction_date: saleDate,
+            transaction_date: actualSaleDate,
             sale_invoice_number: usedInvoice,
             patient_name: patientName,
             chief_complaint: saleChiefComplaint || null,
@@ -547,7 +548,7 @@ const PharmacySales = () => {
         patient_name: patientName,
         chief_complaint: saleChiefComplaint,
         items: salesList.map(item => ({ ...item, batch_no: undefined })),
-        date: saleDate,
+        date: actualSaleDate,
       });
 
       resetSaleDrawer();
@@ -785,9 +786,9 @@ const PharmacySales = () => {
               </div>
             </div>
 
-            {/* Sale Date */}
+            {/* Encounter Date */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Sale Date</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Encounter Date</label>
               <input
                 type="date" value={saleDate} max={todayStr()}
                 onChange={e => { setSaleDate(e.target.value); setSalePatientId(""); setSaleChiefComplaint(""); }}
