@@ -102,7 +102,7 @@ const EncountersPage = () => {
             patient_id: enc.patient_id ?? "", doctor_id: enc.doctor_id ?? "", appointment_id: enc.appointment_id ?? "",
             visit_date: enc.visit_date ? String(enc.visit_date).split("T")[0] : "",
             follow_up_date: enc.follow_up_date ? String(enc.follow_up_date).split("T")[0] : "",
-            BP: enc.BP ?? "",
+            BP: enc.bp ?? enc.BP ?? "",
             chief_complaint: enc.chief_complaint ?? "", notes: enc.notes ?? "",
         });
         setErrors({});
@@ -120,7 +120,7 @@ const EncountersPage = () => {
                 notes: form.notes || "", follow_up_date: form.follow_up_date || null,
                 created_by: "admin", diagnoses: [], prescriptions: []
             };
-            const res = await fetch(`${API}/save_encounter_with_details`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            const res = await fetch(`${API}/encounters_create_update/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             showToast(editingEncounter ? "Encounter updated" : "Encounter added");
